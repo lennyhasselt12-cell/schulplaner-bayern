@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b35">
+  <title>Schulplaner</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">S</span><div><strong>Schulplaner</strong><small>Dein Schulalltag. Im Griff.</small></div></div>
+      <nav aria-label="Hauptnavigation">
+        <button class="nav-item active" data-page="dashboard">⌂ <span>Übersicht</span></button>
+        <button class="nav-item" data-page="grades">▤ <span>Noten</span></button>
+        <button class="nav-item" data-page="timetable">▦ <span>Stundenplan</span></button>
+        <button class="nav-item" data-page="materials">▧ <span>Materialien</span></button>
+        <button class="nav-item" data-page="exams">◷ <span>Proben & Termine</span></button>
+        <button class="nav-item" data-page="assistant">✦ <span>KI-Assistent</span><em>Extra</em></button>
+      </nav>
+      <div class="sidebar-bottom"><div class="mini-avatar" id="sideAvatar">?</div><div class="side-user"><strong id="sideName">Noch kein Profil</strong><small id="sideClass">Demo-Modus</small></div></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-brand" id="menuToggle">☰ <strong>Schulplaner</strong></button>
+        <div class="topbar-spacer"></div>
+        <button class="theme-toggle" id="themeToggle" aria-label="Darstellung wechseln">☀️ <span>Hell</span></button>
+        <button class="profile-button" id="profileButton"><span class="profile-dot"></span> Profil</button>
+      </header>
+
+      <section class="page active" id="page-dashboard">
+        <div class="welcome-row"><div><p class="eyebrow" id="todayLabel">DEIN SCHULTAG</p><h1>Hey <span id="welcomeName">du</span> 👋</h1><p class="muted">Hier ist dein Überblick für heute.</p></div><div class="date-card"><span>HEUTE</span><strong id="dateText">—</strong></div></div>
+        <div class="stats-grid">
+          <article class="stat-card"><span class="stat-icon blue">▤</span><div><small>Noten eingetragen</small><strong id="gradeCount">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon violet">▦</span><div><small>Fächer im Plan</small><strong id="subjectCount">0</strong></div></article>
+          <article class="stat-card"><span class="stat-icon orange">◷</span><div><small>Nächste Probe</small><strong id="nextExam">—</strong></div></article>
+        </div>
+        <div class="dashboard-grid">
+          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">DEIN TAG</p><h2>Heute im Stundenplan</h2></div><button class="text-button" data-goto="timetable">Bearbeiten →</button></div><div id="todaySchedule" class="empty-state">Noch keine Stunden eingetragen. Füge deinen Stundenplan hinzu.</div></article>
+          <article class="panel"><div class="panel-heading"><div><p class="eyebrow">IM BLICK</p><h2>Demnächst</h2></div><button class="text-button" data-goto="exams">Alle Termine →</button></div><div id="upcomingList" class="empty-state">Noch keine Proben oder Termine eingetragen.</div></article>
+        </div>
+        <div class="notice"><span>🔒</span><div><strong>Deine Daten bleiben vorerst auf diesem Gerät.</strong><p>Das ist eine erste Vorschau. Gemeinsame Online-Profile für Freunde richten wir im nächsten Schritt mit einer Datenbank ein.</p></div></div>
+      </section>
+
+      <section class="page" id="page-grades">
+        <div class="page-heading"><div><p class="eyebrow">LEISTUNGEN</p><h1>Deine Noten</h1><p class="muted">Trage deine Noten ein und behalte deinen Schnitt im Blick.</p></div></div>
+        <div class="content-grid">
+          <article class="panel"><h2>Note hinzufügen</h2><form id="gradeForm" class="form-grid"><label>Fach<input id="gradeSubject" required placeholder="z. B. Mathe"></label><label>Note<select id="gradeValue" required><option value="">Auswählen</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label><label>Art<select id="gradeType"><option>Mündlich</option><option>Schulaufgabe</option><option>Stegreifaufgabe</option><option>Projekt</option><option>Sonstiges</option></select></label><button class="primary-button" type="submit">+ Note speichern</button></form></article>
+          <article class="panel average-panel"><p class="eyebrow">DEIN DURCHSCHNITT</p><div class="average" id="average">—</div><p class="muted">Ein einfacher Durchschnitt aller eingetragenen Noten.</p><small>Keine offizielle Zeugnis- oder Abschlussprognose.</small></article>
+        </div>
+        <article class="panel table-panel"><div class="panel-heading"><h2>Notenspiegel</h2><span class="count-pill" id="gradeTotal">0 Einträge</span></div><div class="table-wrap"><table><thead><tr><th>Fach</th><th>Note</th><th>Art</th><th></th></tr></thead><tbody id="gradeRows"><tr><td colspan="4" class="table-empty">Noch keine Noten vorhanden.</td></tr></tbody></table></div></article>
+      </section>
+
+      <section class="page" id="page-timetable">
+        <div class="page-heading"><div><p class="eyebrow">DEINE WOCHE</p><h1>Stundenplan</h1><p class="muted">Füge Unterrichtsstunden und optional deine Lehrkräfte hinzu.</p></div></div>
+        <article class="panel"><h2>Stunde hinzufügen</h2><form id="lessonForm" class="form-grid lesson-form"><label>Wochentag<select id="lessonDay"><option>Montag</option><option>Dienstag</option><option>Mittwoch</option><option>Donnerstag</option><option>Freitag</option></select></label><label>Stunde<select id="lessonPeriod"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label><label>Fach<input id="lessonSubject" required placeholder="z. B. Deutsch"></label><label>Lehrkraft (optional)<input id="lessonTeacher" placeholder="Name"></label><button class="primary-button" type="submit">+ Stunde speichern</button></form></article>
+        <div class="weekday-tabs" id="weekdayTabs"></div><article class="panel"><div class="panel-heading"><h2 id="selectedDayTitle">Montag</h2></div><div id="lessonList" class="list-stack empty-state">Noch keine Stunden eingetragen.</div></article>
+      </section>
+
+      <section class="page" id="page-materials">
+        <div class="page-heading"><div><p class="eyebrow">GUT VORBEREITET</p><h1>Materialien</h1><p class="muted">Was brauchst du für welches Fach?</p></div></div>
+        <article class="panel"><h2>Material eintragen</h2><form id="materialForm" class="form-grid"><label>Fach<input id="materialSubject" required placeholder="z. B. Kunst"></label><label class="wide">Materialien<input id="materialItems" required placeholder="z. B. Block, Bleistift, Geodreieck"></label><button class="primary-button" type="submit">+ Speichern</button></form></article>
+        <div id="materialList" class="cards-grid"></div>
+      </section>
+
+      <section class="page" id="page-exams">
+        <div class="page-heading"><div><p class="eyebrow">NICHTS VERGESSEN</p><h1>Proben & Termine</h1><p class="muted">Plane Klassenarbeiten, Tests und wichtige Abgaben.</p></div></div>
+        <article class="panel"><h2>Termin hinzufügen</h2><form id="examForm" class="form-grid"><label>Fach / Titel<input id="examTitle" required placeholder="z. B. Mathe – Brüche"></label><label>Datum<input id="examDate" type="date" required></label><label>Art<select id="examType"><option>Probe / Schulaufgabe</option><option>Test</option><option>Abgabe</option><option>Sonstiges</option></select></label><button class="primary-button" type="submit">+ Termin speichern</button></form></article>
+        <article class="panel"><h2>Deine Termine</h2><div id="examList" class="list-stack empty-state">Noch keine Termine eingetragen.</div></article>
+        <p class="muted small-note">Diese Vorschau zeigt Termine in der App. Echte Push-Erinnerungen richten wir später ein.</p>
+      </section>
+
+      <section class="page" id="page-assistant">
+        <div class="page-heading"><div><p class="eyebrow">DEIN DIGITALER HELFER</p><h1>KI-Assistent ✦</h1><p class="muted">Ein kleiner Helfer für Fragen zu deinen eingetragenen Schuldaten.</p></div></div>
+        <article class="panel assistant-panel"><div class="assistant-intro"><span class="assistant-spark">✦</span><div><h2>Was steht heute an?</h2><p class="muted">Diese erste Version beantwortet einfache Fragen anhand deiner lokalen App-Daten. Eine echte KI-Verbindung ist noch nicht aktiviert.</p></div></div><div class="chat-log" id="chatLog"><div class="chat-message bot">Hi! Frag mich zum Beispiel: „Was habe ich heute?“ oder „Wann ist meine nächste Probe?“</div></div><form id="chatForm" class="chat-form"><input id="chatInput" placeholder="Schreib eine Frage …" autocomplete="off"><button class="primary-button">Senden</button></form></article>
+      </section>
+
+      <section class="page" id="page-profile">
+        <div class="page-heading"><div><p class="eyebrow">DEINE EINSTELLUNGEN</p><h1>Profil</h1><p class="muted">Deine Angaben für diese Vorschau.</p></div></div>
+        <article class="panel profile-panel"><h2>Profil bearbeiten</h2><form id="profileForm" class="form-grid"><label>Vorname<input id="firstName" required maxlength="40"></label><label>Nachname<input id="lastName" required maxlength="40"></label><label>Schule<input id="school" required maxlength="80" placeholder="Für den Test bitte keine echte Schule eintragen"></label><label>Klasse<input id="className" required maxlength="20" placeholder="z. B. 8a"></label><label>Schulart<select id="schoolType"><option>Mittelschule</option><option>Realschule</option><option>Gymnasium</option><option>Berufsschule</option><option>Andere</option></select></label><label>Angestrebter Abschluss<select id="targetDegree"><option>Noch offen</option><option>Erfolgreicher Abschluss</option><option>Qualifizierender Abschluss</option><option>Mittlerer Schulabschluss</option><option>Abitur</option><option>Anderer Abschluss</option></select></label><button class="primary-button" type="submit">Profil speichern</button></form><p class="muted small-note">Wichtig: In dieser Vorschau gibt es noch keine echte Anmeldung. Gib hier keine echten Passwörter oder sensiblen persönlichen Daten ein.</p><button class="danger-button" id="resetButton">Alle lokalen Testdaten löschen</button></article>
+      </section>
+      <footer>Schulplaner · Erste Vorschau · kostenlos geplant</footer>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
