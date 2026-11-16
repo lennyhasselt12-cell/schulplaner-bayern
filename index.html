@@ -55,8 +55,30 @@
 
       <section class="page" id="page-timetable">
         <div class="page-heading"><div><p class="eyebrow">DEINE WOCHE</p><h1>Stundenplan</h1><p class="muted">Füge Unterrichtsstunden und optional deine Lehrkräfte hinzu.</p></div></div>
-        <article class="panel"><h2>Stunde hinzufügen</h2><form id="lessonForm" class="form-grid lesson-form"><label>Wochentag<select id="lessonDay"><option>Montag</option><option>Dienstag</option><option>Mittwoch</option><option>Donnerstag</option><option>Freitag</option></select></label><label>Stunde<select id="lessonPeriod"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label><label>Fach<input id="lessonSubject" required placeholder="z. B. Deutsch"></label><label>Lehrkraft (optional)<input id="lessonTeacher" placeholder="Name"></label><button class="primary-button" type="submit">+ Stunde speichern</button></form></article>
-        <div class="weekday-tabs" id="weekdayTabs"></div><article class="panel"><div class="panel-heading"><h2 id="selectedDayTitle">Montag</h2></div><div id="lessonList" class="list-stack empty-state">Noch keine Stunden eingetragen.</div></article>
+        <article class="panel timetable-editor">
+          <div class="panel-heading"><div><p class="eyebrow">SCHRITT 1 · FÄCHER</p><h2>Fächer selbst erstellen</h2></div><span class="count-pill">Name & Farbe frei wählbar</span></div>
+          <form id="subjectForm" class="subject-form">
+            <label>Fachname<input id="subjectName" required maxlength="35" placeholder="z. B. Mathematik"></label>
+            <label>Kürzel (optional)<input id="subjectShort" maxlength="6" placeholder="z. B. M"></label>
+            <label>Farbe<input id="subjectColor" type="color" value="#3977b5" aria-label="Farbe des Fachs"></label>
+            <button class="primary-button" type="submit">+ Fach anlegen</button>
+          </form>
+          <div id="subjectChips" class="subject-chips"></div>
+        </article>
+        <article class="panel timetable-editor">
+          <div class="panel-heading"><div><p class="eyebrow">SCHRITT 2 · STUNDENPLAN</p><h2>Fach auswählen und Stunden antippen</h2></div></div>
+          <div class="timetable-toolbar">
+            <label>Aktives Fach<select id="activeSubject"></select></label>
+            <div class="mode-switch" role="group" aria-label="Bearbeitungsmodus"><button type="button" class="mode-button active" data-mode="subject">Fächer eintragen</button><button type="button" class="mode-button" data-mode="teacher">Lehrer zuordnen</button></div>
+          </div>
+          <div class="teacher-tools" id="teacherTools" hidden>
+            <form id="teacherForm" class="teacher-form"><label>Lehrkraft hinzufügen<input id="teacherName" maxlength="50" placeholder="Name der Lehrkraft"></label><button class="secondary-button" type="submit">+ Lehrer</button></form>
+            <label class="teacher-select-label">Aktive Lehrkraft<select id="activeTeacher"></select></label>
+          </div>
+          <p class="timetable-hint" id="timetableHint">Wähle oben ein Fach und tippe auf die Stunden, in denen du es hast. Tippe erneut, um es zu ändern.</p>
+          <div class="timetable-scroll"><div id="timetableGrid" class="timetable-grid" aria-label="Wochenstundenplan"></div></div>
+          <p class="small-note muted">Tipp: Eine Stunde lange gedrückt halten, um sie zu löschen. Du wirst vorher gefragt.</p>
+        </article>
       </section>
 
       <section class="page" id="page-materials">
@@ -74,7 +96,7 @@
 
       <section class="page" id="page-assistant">
         <div class="page-heading"><div><p class="eyebrow">DEIN DIGITALER HELFER</p><h1>KI-Assistent ✦</h1><p class="muted">Ein kleiner Helfer für Fragen zu deinen eingetragenen Schuldaten.</p></div></div>
-        <article class="panel assistant-panel"><div class="assistant-intro"><span class="assistant-spark">✦</span><div><h2>Was steht heute an?</h2><p class="muted">Diese erste Version beantwortet einfache Fragen anhand deiner lokalen App-Daten. Eine echte KI-Verbindung ist noch nicht aktiviert.</p></div></div><div class="chat-log" id="chatLog"><div class="chat-message bot">Hi! Frag mich zum Beispiel: „Was habe ich heute?“ oder „Wann ist meine nächste Probe?“</div></div><form id="chatForm" class="chat-form"><input id="chatInput" placeholder="Schreib eine Frage …" autocomplete="off"><button class="primary-button">Senden</button></form></article>
+        <article class="panel assistant-panel"><div class="assistant-intro"><span class="assistant-spark">✦</span><div><h2>Was steht heute an?</h2><p class="muted">Ich kann deine Schuldaten auswerten, Uhrzeit und Wetter abrufen und typische Fragen zu deinem Schulalltag verstehen. Für freie Gespräche mit einer großen KI wäre später ein externer KI-Dienst nötig.</p></div></div><div class="assistant-quick"><button type="button" class="quick-question" data-question="Was steht heute an?">Was steht heute an?</button><button type="button" class="quick-question" data-question="Wie stehen meine Noten?">Wie stehen meine Noten?</button><button type="button" class="quick-question" data-question="Wie spät ist es?">Wie spät ist es?</button><button type="button" class="quick-question" data-question="Wie wird das Wetter heute?">Wetter heute</button></div><div class="chat-log" id="chatLog"><div class="chat-message bot">Hi! Frag mich ganz normal, zum Beispiel: „Wie sieht's mit meinen Noten aus?“ oder „Was hab ich morgen?“</div></div><form id="chatForm" class="chat-form"><input id="chatInput" placeholder="Schreib eine Frage …" autocomplete="off"><button class="primary-button">Senden</button></form></article>
       </section>
 
       <section class="page" id="page-profile">
