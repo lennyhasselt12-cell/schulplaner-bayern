@@ -42,3 +42,136 @@ button,input,select{font:inherit}button{cursor:pointer}.app-shell{min-height:100
  .timetable-toolbar{align-items:stretch}.mode-switch{width:100%}.mode-button{flex:1;padding:9px 7px}
  .teacher-tools{display:grid}.teacher-form{width:100%}.timetable-grid{min-width:510px}
 }
+
+
+/* Layout-Korrektur für den Stundenplan – besonders auf schmalen Handybildschirmen */
+.subject-form {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 92px !important;
+  gap: 14px !important;
+  align-items: end !important;
+}
+.subject-form > label,
+.teacher-form > label,
+.timetable-toolbar > label,
+.teacher-select-label {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+}
+.subject-form > label input:not([type="color"]),
+.teacher-form > label input,
+.timetable-toolbar > label select,
+.teacher-select-label select {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+}
+.subject-form > label input[type="color"] {
+  display: block !important;
+  width: 100% !important;
+  max-width: 92px !important;
+  height: 44px !important;
+  box-sizing: border-box !important;
+}
+.subject-form > button {
+  grid-column: 1 / -1 !important;
+  justify-self: start !important;
+  min-height: 44px !important;
+}
+.timetable-toolbar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 13px !important;
+  align-items: stretch !important;
+}
+.mode-switch {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  gap: 6px !important;
+  padding: 5px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  background: var(--surface2) !important;
+}
+.mode-switch .mode-button {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 43px !important;
+  padding: 9px 7px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 9px !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+}
+.mode-switch .mode-button.active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+}
+.teacher-tools {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 13px !important;
+  align-items: stretch !important;
+}
+.teacher-form {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: end !important;
+  gap: 9px !important;
+  min-width: 0 !important;
+}
+.teacher-form .secondary-button {
+  min-height: 44px !important;
+  white-space: nowrap !important;
+}
+.timetable-hint {
+  line-height: 1.55 !important;
+  overflow-wrap: anywhere !important;
+}
+@media (max-width: 650px) {
+  .subject-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+  .subject-form > label {
+    width: 100% !important;
+  }
+  .subject-form > label input[type="color"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 48px !important;
+  }
+  .subject-form > button {
+    grid-column: 1 !important;
+    width: 100% !important;
+  }
+  .timetable-toolbar > label {
+    min-width: 0 !important;
+  }
+  .mode-switch .mode-button {
+    font-size: 10px !important;
+    padding: 8px 5px !important;
+  }
+  .teacher-form {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .teacher-form .secondary-button {
+    width: 100% !important;
+  }
+}
