@@ -122,14 +122,7 @@ async function initSupabase(){
     setAuthStatus("Supabase konnte nicht gestartet werden: "+(e.message||"Bitte Projekt-URL und Publishable Key prüfen."));
   }
 }
-const OTP_LIMIT_KEY="schulplaner-email-otp-limits-v1";
-const OTP_FIRST_WAIT=5*60*1000;
-const OTP_LOCKOUT=60*60*1000;
 let pendingOtpEmail="";
-function readOtpLimits(){
-  try{return JSON.parse(localStorage.getItem(OTP_LIMIT_KEY)||"{}")}catch{return {}}
-}
-function writeOtpLimits(value){localStorage.setItem(OTP_LIMIT_KEY,JSON.stringify(value))}
 function emailLimitKey(email){return String(email||"").trim().toLowerCase()}
 function showAuthToast(message){
   const toast=document.getElementById("authToast");
