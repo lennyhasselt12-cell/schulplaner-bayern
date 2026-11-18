@@ -49,6 +49,7 @@ function scheduleCloudSave(){
   cloudSaveTimer=setTimeout(async()=>{
     cloudSaveTimer=null;
     if(!savingUserId || !currentUser || currentUser.id!==savingUserId || !cloudReady) return;
+    if(cloudSaveInFlight){scheduleCloudSave();return;}
     cloudSaveInFlight=true;
     try{
       const {error}=await supabaseClient.from("user_settings").upsert({user_id:savingUserId,settings:{app_data:snapshot},updated_at:new Date().toISOString()},{onConflict:"user_id"});
@@ -441,7 +442,7 @@ function findRequestedDay(s,now){
  const offset=(s.includes("ubermorgen")||s.includes("übermorgen"))?2:s.includes("morgen")?1:s.includes("heute")?0:null;
  if(offset===null)return null;
  const date=new Date(now);date.setDate(date.getDate()+offset);
- return schoolDayForDate(date);
+ return schoolDayForDate(date)||"Wochenende";
 }
 function formatDate(iso){
  const d=new Date(iso+"T12:00:00");
@@ -464,6 +465,8 @@ async function answerQuestion(q){
  const subject=data.subjects.find(x=>s.includes(normalized(x.name)));
  const hourMatch=s.match(/(?:\b|^)(\d{1,2})\.?\s*(?:stunde|std|unterrichtsstunde)(?:\b|$)/);
  const requestedHour=hourMatch?Number(hourMatch[1]):null;
+ if(!today && s.includes("heute"))return "Am Wochenende ist in deinem Stundenplan (Montag bis Freitag) kein Unterricht hinterlegt.";
+ if(requestedDay==="Wochenende")return "Der angefragte Tag liegt am Wochenende. Dein Stundenplan zeigt Unterricht von Montag bis Freitag.";
 
  if(includesAny(s,["hilfe","was kannst du","was kannst","funktionen","beispiele","fragen stellen"]))
    return "Ich kann deinen Schulalltag aus deinen gespeicherten Daten auslesen: Stundenplan für einzelne Tage, einzelne Stunden und Lehrkräfte; Noten und Fachschnitte; nächste Proben und Termine; Materialien; deine Fächer und Lehrkräfte sowie Uhrzeit und Wetter. Frag zum Beispiel: „Was habe ich Donnerstag in der 3. Stunde?“, „Wie ist mein Schnitt in Mathe?“ oder „Was muss ich für die nächste Probe lernen?“";
