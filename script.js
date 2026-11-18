@@ -1,7 +1,7 @@
 const KEY = "schulplaner-preview-v1";
 // Supabase-Projektdaten hier eintragen (Projekt-URL + Publishable Key, niemals Service-Role-Key).
 const SUPABASE_URL = "https://wygkjvofgelfttdfjfcl.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "HIER_DEIN_SUPABASE_PUBLISHABLE_KEY_EINFUEGEN";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_3jRUceLgBkmqgw0azh-SUoA_yZEick5a";
 let supabaseClient = null;
 let currentUser = null;
 let cloudSaveTimer = null;
