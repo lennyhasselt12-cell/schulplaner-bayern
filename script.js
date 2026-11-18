@@ -183,7 +183,7 @@ async function requestSignupCode(isResend=false){
   document.getElementById("signUpButton").disabled=true;
   try{
     let result;
-    const resendExisting=gate.count===1;
+    const resendExisting=!!entry.lastSent;
     if(!resendExisting){
       result=await supabaseClient.auth.signUp({email,password});
     }else{
