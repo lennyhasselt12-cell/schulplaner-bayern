@@ -384,40 +384,109 @@ async function weatherAnswer(){
 function weatherLabel(code){
  if(code===0)return"Der Himmel ist klar";if([1,2,3].includes(code))return"Es ist leicht bis stark bewölkt";if([45,48].includes(code))return"Es ist neblig";if([51,53,55,56,57].includes(code))return"Es gibt Nieselregen";if([61,63,65,66,67,80,81,82].includes(code))return"Es regnet";if([71,73,75,77,85,86].includes(code))return"Es schneit";if([95,96,99].includes(code))return"Es gibt Gewitter";return"Die Wetterlage ist wechselhaft";
 }
+function findRequestedDay(s,now){
+ const map={"montag":"Montag","dienstag":"Dienstag","mittwoch":"Mittwoch","donnerstag":"Donnerstag","freitag":"Freitag"};
+ for(const [key,value] of Object.entries(map))if(s.includes(key))return value;
+ if(s.includes("ubermorgen")||s.includes("übermorgen"))return days[(now.getDay()+1)%7];
+ if(s.includes("morgen"))return days[now.getDay()%7];
+ if(s.includes("heute"))return days[(now.getDay()+6)%7];
+ return null;
+}
+function formatDate(iso){
+ const d=new Date(iso+"T12:00:00");
+ return d.toLocaleDateString("de-DE",{weekday:"long",day:"2-digit",month:"long"});
+}
+function gradeSummary(subjectName=null){
+ const list=subjectName?data.grades.filter(g=>normalized(g.subject)===normalized(subjectName)):data.grades;
+ if(!list.length)return subjectName?`Für ${subjectName} hast du noch keine Noten eingetragen.`:"Du hast noch keine Noten eingetragen.";
+ const avg=list.reduce((sum,g)=>sum+Number(g.grade),0)/list.length;
+ const breakdown={};
+ list.forEach(g=>(breakdown[g.subject]??=[]).push(Number(g.grade)));
+ const ranked=Object.entries(breakdown).map(([name,values])=>({name,avg:values.reduce((a,b)=>a+b,0)/values.length,count:values.length})).sort((a,b)=>a.avg-b.avg);
+ let out=subjectName?`In ${subjectName} hast du ${list.length} ${list.length===1?"Note":"Noten"}. Dein einfacher Schnitt ist ${avg.toFixed(2).replace(".",",")}.`:`Du hast ${list.length} Noten aus ${ranked.length} Fächern. Dein einfacher Gesamtschnitt ist ${avg.toFixed(2).replace(".",",")}.`;
+ if(!subjectName&&ranked.length>1)out+=` Am besten ist aktuell ${ranked[0].name} (${ranked[0].avg.toFixed(2).replace(".",",")}), am meisten Übungspotenzial gibt es in ${ranked[ranked.length-1].name} (${ranked[ranked.length-1].avg.toFixed(2).replace(".",",")}).`;
+ out+=" Das ist ein einfacher Durchschnitt deiner gespeicherten Noten, keine offizielle Zeugnis- oder Abschlussprognose.";
+ return out;
+}
 async function answerQuestion(q){
- const s=normalized(q),now=new Date(),today=days[(now.getDay()+6)%7],tomorrow=days[(now.getDay())%7];
+ const s=normalized(q),now=new Date(),today=days[(now.getDay()+6)%7],requestedDay=findRequestedDay(s,now);
+ const subject=data.subjects.find(x=>s.includes(normalized(x.name)));
+ const hourMatch=s.match(/(?:\b|^)(\d{1,2})\.?\s*(?:stunde|std|unterrichtsstunde)(?:\b|$)/);
+ const requestedHour=hourMatch?Number(hourMatch[1]):null;
+
+ if(includesAny(s,["hilfe","was kannst du","was kannst","funktionen","beispiele","fragen stellen"]))
+   return "Ich kann deinen Schulalltag aus deinen gespeicherten Daten auslesen: Stundenplan für einzelne Tage, einzelne Stunden und Lehrkräfte; Noten und Fachschnitte; nächste Proben und Termine; Materialien; deine Fächer und Lehrkräfte sowie Uhrzeit und Wetter. Frag zum Beispiel: „Was habe ich Donnerstag in der 3. Stunde?“, „Wie ist mein Schnitt in Mathe?“ oder „Was muss ich für die nächste Probe lernen?“";
+
  if(includesAny(s,["wetter","regnet","regen","temperatur","warm","kalt","sonnig","schneit"]))return await weatherAnswer();
  if(includesAny(s,["uhr","uhrzeit","wie spat","zeit","wie viel uhr"]))return `Es ist gerade ${new Intl.DateTimeFormat("de-DE",{hour:"2-digit",minute:"2-digit"}).format(now)} Uhr.`;
- if(includesAny(s,["morgen","am morgigen"]))return scheduleAnswer(tomorrow);
- if(includesAny(s,["heute","stundenplan","unterricht","schule","facher","faecher","was hab","was steht an","was kommt dran"])){
-   if(includesAny(s,["lehrer","lehrkraft"]))return teacherAnswer(today);
-   return scheduleAnswer(today);
+
+ if(includesAny(s,["note","noten","schnitt","durchschnitt","bewertung","notenstand","zeugnis","stehe ich","wie stehe"])){
+   return gradeSummary(subject?.name||null);
  }
- if(includesAny(s,["not","schnitt","durchschnitt","bewertung","notenstand","stehe ich","wie stehe","zeugnis"])){
-   if(!data.grades.length)return "Du hast noch keine Noten eingetragen. Sobald du ein paar Noten speicherst, kann ich dir deinen Schnitt und deine stärkeren bzw. schwächeren Fächer nennen.";
-   const avg=data.grades.reduce((n,x)=>n+x.grade,0)/data.grades.length;
-   const by={};data.grades.forEach(g=>(by[g.subject]??=[]).push(g.grade));
-   const subjectAvgs=Object.entries(by).map(([subject,grades])=>({subject,avg:grades.reduce((a,b)=>a+b,0)/grades.length})).sort((a,b)=>a.avg-b.avg);
-   const best=subjectAvgs[0],weak=subjectAvgs[subjectAvgs.length-1];
-   let answer=`Du hast ${data.grades.length} Noten in ${subjectAvgs.length} Fächern eingetragen. Dein einfacher Gesamtschnitt liegt bei ${avg.toFixed(2).replace(".",",")}. `;
-   if(best)answer+=`Am besten stehst du bisher in ${best.subject} (${best.avg.toFixed(2).replace(".",",")}), `;
-   if(weak&&weak.subject!==best?.subject)answer+=`und am meisten Luft nach oben ist in ${weak.subject} (${weak.avg.toFixed(2).replace(".",",")}). `;
-   answer+="Das ist nur der Durchschnitt deiner gespeicherten Einträge, kein offizieller Zeugnisdurchschnitt.";
-   if(includesAny(s,["abschluss","schaff","qual","abitur","realschulabschluss"]))answer+=" "+document.getElementById("prognosisContent").innerText;
+
+ if(includesAny(s,["probe","termin","test","schulaufgabe","ste greif","examen","wann schreibe","wann ist"])){
+   const upcoming=[...data.exams].filter(x=>x.date>=now.toISOString().slice(0,10)).sort((a,b)=>a.date.localeCompare(b.date));
+   if(subject){
+     const related=upcoming.filter(x=>normalized(x.title).includes(normalized(subject.name)));
+     if(related.length)return `Für ${subject.name} ist als nächster Termin ${related[0].title} am ${formatDate(related[0].date)} eingetragen.`;
+   }
+   if(!upcoming.length)return "Du hast aktuell keine zukünftigen Proben oder Termine eingetragen.";
+   return `Dein nächster Termin ist ${upcoming[0].title} am ${formatDate(upcoming[0].date)} (${upcoming[0].type}). Danach sind noch ${upcoming.length-1} weitere zukünftige Termine eingetragen.`;
+ }
+
+ if(includesAny(s,["material","mitbringen","brauch ich","einpacken","was brauche"])){
+   const mats=subject?data.materials.filter(m=>normalized(m.subject)===normalized(subject.name)):data.materials;
+   if(!mats.length)return subject?`Für ${subject.name} hast du noch keine Materialien hinterlegt.`:"Du hast noch keine Materialien hinterlegt.";
+   return (subject?`Für ${subject.name}: `:"Deine eingetragenen Materialien: ")+mats.map(m=>`${m.subject}: ${m.items}`).join("; ")+".";
+ }
+
+ if(includesAny(s,["lehrer","lehrkraft","lehrerin","lehrerinnen"])){
+   const day=requestedDay||today;
+   if(subject){
+     const ls=data.lessons.filter(x=>x.day===day&&normalized(x.subject)===normalized(subject.name)&&x.teacher);
+     return ls.length?`${day} hast du ${subject.name} bei ${[...new Set(ls.map(x=>x.teacher))].join(", ")}.`:`Für ${subject.name} ist am ${day} keine Lehrkraft eingetragen.`;
+   }
+   return teacherAnswer(day);
+ }
+
+ if(requestedHour&&requestedDay){
+   const lesson=data.lessons.find(x=>x.day===requestedDay&&Number(x.period)===requestedHour);
+   return lesson?`${requestedDay}, ${requestedHour}. Stunde: ${lesson.subject}${lesson.teacher?", bei "+lesson.teacher:""}.`:`Am ${requestedDay} ist in der ${requestedHour}. Stunde noch nichts eingetragen.`;
+ }
+
+ if(includesAny(s,["stundenplan","unterricht","schule","was hab","was steht an","was kommt","welche facher","welche faecher","fach heute","fach morgen"])||requestedDay){
+   const day=requestedDay||today;
+   if(subject){
+     const found=data.lessons.filter(x=>x.day===day&&normalized(x.subject)===normalized(subject.name)).sort((a,b)=>a.period-b.period);
+     return found.length?`${subject.name} hast du am ${day} in der ${found.map(x=>x.period+". Stunde").join(" und ")}.`:`Am ${day} hast du ${subject.name} laut deinem Stundenplan nicht.`;
+   }
+   return scheduleAnswer(day);
+ }
+
+ if(subject){
+   const lessons=data.lessons.filter(x=>normalized(x.subject)===normalized(subject.name));
+   const marks=data.grades.filter(x=>normalized(x.subject)===normalized(subject.name));
+   let answer=`${subject.name} ist in deinen Fächern gespeichert. `;
+   if(lessons.length)answer+=`Es ist ${lessons.length} ${lessons.length===1?"Mal":"Mal"} im Stundenplan eingetragen. `;
+   if(marks.length)answer+=gradeSummary(subject.name);
+   else answer+="Du hast dazu noch keine Noten gespeichert.";
    return answer;
  }
- if(includesAny(s,["probe","termin","test","schulaufgabe","stegreif","ex "])) {
-   const es=[...data.exams].filter(x=>x.date>=now.toISOString().slice(0,10)).sort((a,b)=>a.date.localeCompare(b.date));
-   return es.length?`Dein nächster Termin ist ${es[0].title} am ${new Date(es[0].date+"T12:00:00").toLocaleDateString("de-DE")} (${es[0].type}). Insgesamt hast du ${es.length} kommende Termine eingetragen.`:"Du hast aktuell keine kommenden Proben oder Termine eingetragen.";
+
+ if(includesAny(s,["wie viele","anzahl","wieviel"])){
+   if(includesAny(s,["probe","termin","test"]))return `Du hast ${data.exams.length} Termine insgesamt gespeichert.`;
+   if(includesAny(s,["note"]))return `Du hast ${data.grades.length} Noten gespeichert.`;
+   if(includesAny(s,["fach"]))return `Du hast ${data.subjects.length} Fächer angelegt.`;
+   if(includesAny(s,["lehrer","lehrkraft"]))return `Du hast ${data.teachers.length} Lehrkräfte gespeichert.`;
+   return `In deinem Schulplaner stehen ${data.subjects.length} Fächer, ${data.grades.length} Noten, ${data.exams.length} Termine und ${data.materials.length} Materialeinträge.`;
  }
- if(includesAny(s,["lehrer","lehrkraft"]))return teacherAnswer(today);
- if(includesAny(s,["fach","stundenplan"]))return scheduleAnswer(today);
- if(includesAny(s,["material","mitbringen","brauch ich"])) {
-   const mats=data.materials;if(!mats.length)return"Du hast noch keine Materialien hinterlegt.";
-   return "Eingetragene Materialien: "+mats.map(m=>`${m.subject}: ${m.items}`).join("; ")+".";
+
+ if(includesAny(s,["profil","klasse","schule","schulart","abschluss"])){
+   const p=data.profile||{};
+   return `In deinem Profil ist ${p.school||"noch keine Schule"}${p.klass?", Klasse "+p.klass:""}${p.type?", Schulart "+p.type:""}${p.degree?", Ziel "+p.degree:""} eingetragen.`;
  }
- if(includesAny(s,["hilfe","was kannst du","was kannst"]))return "Ich kann deinen Stundenplan für heute oder morgen, deine Noten und Fachschnitte, Lehrer, Materialien, kommende Proben, die Uhrzeit und das aktuelle Wetter abfragen. Frag einfach frei heraus!";
- return "Ich bin gerade der Schulplaner-Assistent und kann deine eingetragenen Schuldaten sowie Uhrzeit und Wetter auswerten. Bei allgemeinen offenen Fragen kann ich ohne echte externe KI noch nicht zuverlässig frei antworten. Versuch gern, deine Frage anders zu formulieren oder frag mich nach Noten, Stundenplan, Lehrern, Materialien, Proben, Uhrzeit oder Wetter.";
+
+ return "Ich habe deine Frage noch nicht ganz verstanden. Du kannst mich zum Beispiel fragen: „Was habe ich morgen?“, „Was habe ich am Freitag in der 2. Stunde?“, „Wie ist mein Mathe-Schnitt?“, „Wann ist meine nächste Probe?“ oder „Was muss ich für Englisch mitbringen?“";
 }
 function teacherAnswer(day){
  const ls=data.lessons.filter(x=>x.day===day&&x.teacher).sort((a,b)=>a.period-b.period);
