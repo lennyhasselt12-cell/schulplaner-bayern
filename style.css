@@ -296,3 +296,21 @@ body.light .nav-item.active { background:#e8eef9; color:#203456; }
 body.light .sidebar-bottom { border-color:var(--line); }
 body.light .theme-toggle,
 body.light .profile-button { background:var(--surface); color:var(--text); }
+
+
+/* E-Mail-Code: kompakte, responsive Bestätigungsansicht */
+.otp-panel{grid-column:1/-1;margin-top:8px;padding:22px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,var(--surface2),var(--surface));text-align:center;box-shadow:var(--shadow);animation:otpIn .35s ease both}
+.otp-panel[hidden]{display:none}
+.otp-icon{width:48px;height:48px;margin:0 auto 12px;display:grid;place-items:center;border-radius:15px;background:color-mix(in srgb,var(--accent) 17%,transparent);color:var(--accent);font-size:24px}
+.otp-panel h3{margin:5px 0 8px;font-size:19px}
+.otp-panel>p{max-width:420px;margin:0 auto 18px;color:var(--muted);font-size:13px;line-height:1.55}
+.otp-panel label{display:block;margin-bottom:8px;text-align:left;font-size:12px;font-weight:700}
+.otp-code-input{display:block;width:100%;max-width:300px;margin:0 auto 14px;padding:13px 10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font:700 26px/1.2 'DM Sans',sans-serif;letter-spacing:.45em;text-align:center}
+.otp-code-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.otp-panel>.primary-button{width:100%;max-width:300px;min-height:45px}
+.otp-resend{display:block;margin:10px auto 0}
+.otp-hint{margin:12px auto 0!important;font-size:12px!important}
+.auth-toast{position:fixed;z-index:1000;top:18px;left:50%;width:max-content;max-width:calc(100vw - 28px);padding:13px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--text);box-shadow:0 12px 35px #0003;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transform:translate(-50%,-24px);transition:opacity .25s ease,transform .25s ease}
+.auth-toast.show{opacity:1;transform:translate(-50%,0)}
+@keyframes otpIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:520px){.otp-panel{padding:18px 14px}.auth-toast{top:10px;text-align:center}}
