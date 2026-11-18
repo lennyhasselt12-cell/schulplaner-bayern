@@ -122,6 +122,40 @@ async function initSupabase(){
     setAuthStatus("Supabase konnte nicht gestartet werden: "+(e.message||"Bitte Projekt-URL und Publishable Key prüfen."));
   }
 }
+const TURNSTILE_SITE_KEY="0x4AAAAAAGHkPNIOQrAuJshW";
+let turnstileWidgetId=null;
+let turnstileToken="";
+let turnstileLoadPromise=null;
+function loadTurnstile(){
+  if(window.turnstile)return Promise.resolve();
+  if(!turnstileLoadPromise){
+    turnstileLoadPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement("script");
+      script.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async=true;script.defer=true;
+      script.onload=resolve;script.onerror=()=>reject(new Error("Der Sicherheitscheck konnte nicht geladen werden."));
+      document.head.appendChild(script);
+    });
+  }
+  return turnstileLoadPromise;
+}
+async function initTurnstile(){
+  try{
+    await loadTurnstile();
+    if(turnstileWidgetId!==null||!document.getElementById("turnstileWidget"))return;
+    turnstileWidgetId=window.turnstile.render("#turnstileWidget",{
+      sitekey:TURNSTILE_SITE_KEY,
+      theme:"auto",
+      callback:(token)=>{turnstileToken=token;},
+      "expired-callback":()=>{turnstileToken="";},
+      "error-callback":()=>{turnstileToken="";setAuthStatus("Sicherheitscheck fehlgeschlagen. Bitte lade die Seite neu.");}
+    });
+  }catch(error){setAuthStatus(error.message||"Sicherheitscheck konnte nicht geladen werden.");}
+}
+function resetTurnstile(){
+  turnstileToken="";
+  if(window.turnstile&&turnstileWidgetId!==null)window.turnstile.reset(turnstileWidgetId);
+}
 let pendingOtpEmail="";
 function emailLimitKey(email){return String(email||"").trim().toLowerCase()}
 function showAuthToast(message){
@@ -156,6 +190,8 @@ async function requestSignupCode(isResend=false){
     const message="Du hast doch schon einen Code bekommen. Schau bitte in dein E-Mail-Postfach.";
     setAuthStatus(message);showAuthToast(message);return;
   }
+  if(!turnstileToken){setAuthStatus("Bitte schließe zuerst den Sicherheitscheck ab.");return;}
+  const captchaToken=turnstileToken;
   setAuthStatus(isResend?"Wir senden dir einen neuen Code …":"Wir erstellen dein Konto …");
   document.getElementById("signUpButton").disabled=true;
   document.getElementById("resendOtpButton").disabled=true;
@@ -163,7 +199,7 @@ async function requestSignupCode(isResend=false){
     const response=await fetch("https://wygkjvofgelfttdfjfcl.supabase.co/functions/v1/signup-email-code",{
       method:"POST",
       headers:{"Content-Type":"application/json","apikey":"sb_publishable_3jRUceLgBkmqgw0azhSUoA_yZEick5a"},
-      body:JSON.stringify({action:isResend?"resend":"signup",email,...(isResend?{}:{password})})
+      body:JSON.stringify({action:isResend?"resend":"signup",email,captchaToken,...(isResend?{}:{password})})
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok){
@@ -183,6 +219,7 @@ async function requestSignupCode(isResend=false){
   }catch(e){
     setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen."));
   }finally{
+    resetTurnstile();
     document.getElementById("signUpButton").disabled=false;
     document.getElementById("resendOtpButton").disabled=false;
   }
@@ -757,6 +794,7 @@ document.getElementById("coachStopButton").addEventListener("click",()=>{documen
 
 render();
 initSupabase();
+initTurnstile();
 
 
 // Beim Zurückkehren zur Website aktuelle Cloud-Daten laden (z. B. nach Änderungen auf einem anderen Gerät).
