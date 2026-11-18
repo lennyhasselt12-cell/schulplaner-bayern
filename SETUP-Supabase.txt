@@ -31,3 +31,13 @@ Nur den Publishable Key im Frontend verwenden. Niemals den Supabase Secret Key o
 
 TEST
 Nach dem Commit: Konto A anmelden, Testfach und Teststunde anlegen, abmelden, Konto B anmelden und prüfen, dass A-Daten nicht erscheinen. Anschließend Konto A auf einem zweiten Gerät anmelden und die Synchronisierung in beide Richtungen prüfen. Erst danach echte Daten verwenden.
+
+
+WICHTIG – TEST VOR DEM START
+- Der Schulplaner speichert die App-Daten als app_data im JSONB-Feld settings der Tabelle user_settings.
+- Der Zugriff muss durch RLS auf auth.uid() = user_id beschränkt sein (SELECT, INSERT und UPDATE).
+- Es wird kein Service-Role-Key im Browser verwendet.
+- Mehrere Geräte laden beim Anmelden bzw. beim Zurückkehren zur geöffneten Seite den Cloud-Datensatz des angemeldeten Kontos.
+- Beim Abmelden werden die zuvor sichtbaren lokalen Daten geleert; die Cloud-Daten bleiben dem jeweiligen Konto zugeordnet.
+- Die tatsächliche RLS-Konfiguration und die Synchronisierung müssen vor dem öffentlichen Start mit zwei getrennten Testkonten geprüft werden.
+- Der Lerncoach ist eine lokale, regelbasierte Lernhilfe und kein frei formulierendes ChatGPT-Modell.

@@ -108,7 +108,12 @@ async function initSupabase(){
       clearTimeout(cloudSaveTimer);cloudReady=false;
       currentUser=session?.user||null;updateAuthUI();
       if(currentUser){try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
-      else setAuthStatus("Abgemeldet. Daten auf diesem Gerät bleiben erhalten.");
+      else {
+        data=emptyData();
+        localStorage.setItem(KEY,JSON.stringify(data));
+        render();
+        setAuthStatus("Abgemeldet. Deine persönlichen Cloud-Daten bleiben in deinem Konto gespeichert.");
+      }
     });
   }catch(e){
     supabaseClient=null;
@@ -155,7 +160,17 @@ document.querySelectorAll("[data-goto]").forEach(b=>b.addEventListener("click",(
 document.getElementById("profileButton").onclick=()=>go("profile");
 document.getElementById("signInButton").onclick=()=>signInOrUp("signin");
 document.getElementById("signUpButton").onclick=()=>signInOrUp("signup");
-document.getElementById("signOutButton").onclick=async()=>{clearTimeout(cloudSaveTimer);cloudReady=false;if(supabaseClient)await supabaseClient.auth.signOut();currentUser=null;updateAuthUI();setAuthStatus("Abgemeldet. Deine Daten auf diesem Gerät bleiben erhalten.");};
+document.getElementById("signOutButton").onclick=async()=>{
+  clearTimeout(cloudSaveTimer);
+  cloudReady=false;
+  if(supabaseClient) await supabaseClient.auth.signOut();
+  currentUser=null;
+  data=emptyData();
+  localStorage.setItem(KEY,JSON.stringify(data));
+  updateAuthUI();
+  render();
+  setAuthStatus("Abgemeldet. Deine persönlichen Cloud-Daten bleiben in deinem Konto gespeichert.");
+};
 document.getElementById("menuToggle").onclick=()=>document.querySelector(".sidebar").classList.toggle("open");
 document.getElementById("themeToggle").onclick=()=>{data.theme=data.theme==="light"?"dark":"light";save()};
 
@@ -660,3 +675,26 @@ document.getElementById("coachStopButton").addEventListener("click",()=>{documen
 
 render();
 initSupabase();
+
+
+// Beim Zurückkehren zur Website aktuelle Cloud-Daten laden (z. B. nach Änderungen auf einem anderen Gerät).
+async function refreshCloudOnReturn(){
+  if(!currentUser || !supabaseClient || !cloudReady || cloudSaveTimer) return;
+  try{
+    const userId=currentUser.id;
+    const {data:row,error}=await supabaseClient.from("user_settings").select("settings").eq("user_id",userId).maybeSingle();
+    if(error) throw error;
+    if(!currentUser || currentUser.id!==userId || !cloudReady) return;
+    if(row?.settings?.app_data){
+      const remote=row.settings.app_data;
+      data={profile:remote.profile||{},grades:remote.grades||[],lessons:remote.lessons||[],materials:remote.materials||[],exams:remote.exams||[],theme:remote.theme||"dark",subjects:remote.subjects||[],teachers:remote.teachers||[],studyNotes:remote.studyNotes||{}};
+      localStorage.setItem(KEY,JSON.stringify(data));
+      render();
+      setAuthStatus("Deine aktuellen Online-Daten wurden geladen ✓");
+    }
+  }catch(err){
+    console.warn("Cloud-Aktualisierung beim Zurückkehren fehlgeschlagen:",err);
+  }
+}
+window.addEventListener("focus",refreshCloudOnReturn);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshCloudOnReturn()});

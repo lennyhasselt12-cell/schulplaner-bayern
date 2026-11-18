@@ -237,3 +237,62 @@ button,input,select{font:inherit}button{cursor:pointer}.app-shell{min-height:100
 .coach-progress { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; margin:12px 0 18px; }
 .coach-progress div { height:100%; width:0; background:var(--accent); transition:width .25s ease; }
 @media (max-width:650px) { .coach-options { grid-template-columns:1fr; } .coach-actions > button { width:100%; } }
+
+
+/* Einheitliche Formularfarben in Hell- und Dunkelmodus */
+.form-grid textarea,
+.form-grid input,
+.form-grid select,
+.chat-form input,
+.coach-setup textarea {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  caret-color: var(--accent);
+  color-scheme: dark;
+}
+body.light .form-grid textarea,
+body.light .form-grid input,
+body.light .form-grid select,
+body.light .chat-form input,
+body.light .coach-setup textarea {
+  color-scheme: light;
+}
+.form-grid textarea::placeholder,
+.form-grid input::placeholder,
+.chat-form input::placeholder,
+.coach-setup textarea::placeholder {
+  color: var(--muted);
+  opacity: .82;
+}
+.form-grid textarea:focus,
+.form-grid input:focus,
+.form-grid select:focus,
+.coach-setup textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.coach-setup textarea {
+  display:block;
+  width:100%;
+  min-height:170px;
+  padding:14px;
+  font:inherit;
+  line-height:1.55;
+  resize:vertical;
+}
+body.light .sidebar {
+  background:#ffffff;
+  border-color:var(--line);
+}
+body.light .brand small,
+body.light .sidebar-bottom,
+body.light .side-user small { color:var(--muted); }
+body.light .nav-item { color:#52627d; }
+body.light .nav-item:hover,
+body.light .nav-item.active { background:#e8eef9; color:#203456; }
+body.light .sidebar-bottom { border-color:var(--line); }
+body.light .theme-toggle,
+body.light .profile-button { background:var(--surface); color:var(--text); }
