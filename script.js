@@ -14,6 +14,7 @@ if (!days.includes(selectedDay)) selectedDay = "Montag";
 let timetableMode = "subject";
 let longPressTimer = null;
 let longPressTriggered = false;
+let subjectLongPressTimer = null;
 
 function loadData(){
   try {
@@ -252,8 +253,22 @@ function renderTimetable(){
   const teacherSelect=document.getElementById("activeTeacher"),currentTeacher=teacherSelect.value;
   teacherSelect.innerHTML=data.teachers.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")||'<option value="">Erst eine Lehrkraft anlegen</option>';
   if(data.teachers.includes(currentTeacher))teacherSelect.value=currentTeacher;
-  document.getElementById("subjectChips").innerHTML=data.subjects.length?data.subjects.map(s=>`<div class="subject-chip"><span class="subject-swatch" style="background:${esc(s.color)}"></span><span><strong>${esc(s.name)}</strong><small>${esc(s.short||"")}</small></span><button type="button" data-edit-subject="${s.id}" aria-label="Fach bearbeiten">✎</button></div>`).join(""):'<p class="muted small-note">Lege zuerst deine Fächer an. Name, Kürzel und Farbe kannst du selbst bestimmen.</p>';
+  document.getElementById("subjectChips").innerHTML=data.subjects.length?data.subjects.map(s=>`<div class="subject-chip" data-subject-id="${s.id}" title="Gedrückt halten, um das Fach zu löschen"><span class="subject-swatch" style="background:${esc(s.color)}"></span><span><strong>${esc(s.name)}</strong><small>${esc(s.short||"")}</small></span><button type="button" data-edit-subject="${s.id}" aria-label="Fach bearbeiten">✎</button></div>`).join(""):'<p class="muted small-note">Lege zuerst deine Fächer an. Name, Kürzel und Farbe kannst du selbst bestimmen.</p>';
   document.querySelectorAll("[data-edit-subject]").forEach(b=>b.onclick=()=>editSubject(b.dataset.editSubject));
+  document.querySelectorAll("[data-subject-id]").forEach(chip=>{
+    const id=chip.dataset.subjectId;
+    chip.addEventListener("pointerdown",e=>{
+      if(e.target.closest("button"))return;
+      clearTimeout(subjectLongPressTimer);
+      subjectLongPressTimer=setTimeout(()=>deleteSubject(id),650);
+    });
+    ["pointerup","pointerleave","pointercancel"].forEach(ev=>chip.addEventListener(ev,()=>clearTimeout(subjectLongPressTimer)));
+    chip.addEventListener("contextmenu",e=>{
+      if(e.target.closest("button"))return;
+      e.preventDefault();
+      deleteSubject(id);
+    });
+  });
   const grid=document.getElementById("timetableGrid");
   const dayShort=["Mo","Di","Mi","Do","Fr"];
   grid.innerHTML=`<div class="tt-corner"></div>${dayShort.map(d=>`<div class="tt-day">${d}</div>`).join("")}`+
@@ -286,6 +301,19 @@ function renderTimetable(){
     }
   });
 }
+function deleteSubject(id){
+  const subject=data.subjects.find(s=>String(s.id)===String(id));
+  if(!subject)return;
+  const used=data.lessons.filter(l=>l.subject===subject.name).length;
+  const message=used
+    ? `Möchtest du das Fach „${subject.name}“ wirklich löschen? Dabei werden auch ${used} ${used===1?"Stunde":"Stunden"} dieses Fachs aus deinem Stundenplan entfernt. Deine Noten und Materialien bleiben erhalten.`
+    : `Möchtest du das Fach „${subject.name}“ wirklich löschen? Deine Noten und Materialien bleiben erhalten.`;
+  if(!confirm(message))return;
+  data.subjects=data.subjects.filter(s=>String(s.id)!==String(id));
+  data.lessons=data.lessons.filter(l=>l.subject!==subject.name);
+  save();
+}
+
 function editSubject(id){
   const s=data.subjects.find(x=>String(x.id)===String(id));if(!s)return;
   const name=prompt("Fachname:",s.name);if(name===null)return;

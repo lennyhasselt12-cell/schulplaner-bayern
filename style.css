@@ -209,3 +209,11 @@ button,input,select{font:inherit}button{cursor:pointer}.app-shell{min-height:100
 .timetable-options-button:active {
   transform: scale(.94);
 }
+
+/* Fach-Chips: langes Drücken zum Löschen */
+.subject-chip {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  cursor: default;
+}
