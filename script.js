@@ -252,7 +252,7 @@ document.getElementById("signInButton").onclick=()=>signInOrUp("signin");
 document.getElementById("signUpButton").onclick=()=>signInOrUp("signup");
 document.getElementById("verifyOtpButton").onclick=verifySignupCode;
 document.getElementById("resendOtpButton").onclick=()=>requestSignupCode(true);
-document.getElementById("otpCode").addEventListener("input",e=>{e.target.value=e.target.value.replace(/\\D/g,"").slice(0,6)});
+document.getElementById("otpCode").addEventListener("input",e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,6)});
 document.getElementById("signOutButton").onclick=async()=>{
   clearTimeout(cloudSaveTimer);
   cloudReady=false;
