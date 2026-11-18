@@ -136,27 +136,16 @@ function showOtpPanel(email){
   document.getElementById("otpPanel").hidden=false;
   document.getElementById("authEmail").readOnly=true;
   document.getElementById("authPassword").readOnly=true;
+  document.getElementById("otpCode").value="";
   document.getElementById("otpCode").focus();
   document.getElementById("otpHint").textContent="Der Code ist 5 Minuten gültig. Prüfe auch deinen Spam-Ordner.";
 }
 function hideOtpPanel(){
   document.getElementById("otpPanel").hidden=true;
+  document.getElementById("otpCode").value="";
   document.getElementById("authEmail").readOnly=false;
   document.getElementById("authPassword").readOnly=false;
   pendingOtpEmail="";
-}
-function formatWait(ms){
-  const minutes=Math.max(1,Math.ceil(ms/60000));
-  return minutes+" Minute"+(minutes===1?"":"n");
-}
-function otpRemaining(email){
-  const limits=readOtpLimits(),entry=limits[emailLimitKey(email)];
-  if(!entry)return {allowed:true,count:0};
-  const now=Date.now();
-  if(entry.count>=2&&entry.lockUntil>now)return {allowed:false,count:2,wait:entry.lockUntil-now,locked:true};
-  if(entry.count===1&&entry.lastSent+OTP_FIRST_WAIT>now)return {allowed:false,count:1,wait:entry.lastSent+OTP_FIRST_WAIT-now,locked:false};
-  if(entry.count>=2&&entry.lockUntil<=now)return {allowed:true,count:0};
-  return {allowed:true,count:entry.count||0};
 }
 async function requestSignupCode(isResend=false){
   if(!supabaseClient){setAuthStatus("Supabase ist noch nicht bereit. Bitte lade die Seite neu.");return;}
