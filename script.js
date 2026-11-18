@@ -32,7 +32,12 @@ function loadData(){
   }
 }
 function save(){
-  localStorage.setItem(KEY,JSON.stringify(data));
+  try {
+    localStorage.setItem(KEY,JSON.stringify(data));
+  } catch(err) {
+    console.error("Lokales Speichern fehlgeschlagen:",err);
+    setAuthStatus("Speichern auf diesem Gerät ist blockiert. Prüfe die Website-Daten-/Safari-Einstellungen.");
+  }
   render();
   if(currentUser && cloudReady) scheduleCloudSave();
 }
