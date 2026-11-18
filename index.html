@@ -132,6 +132,17 @@
             <label>E-Mail-Adresse<input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
             <label>Passwort<input id="authPassword" type="password" minlength="8" autocomplete="current-password" placeholder="Mindestens 8 Zeichen"></label>
             <div class="auth-actions"><button class="primary-button" type="button" id="signInButton">Anmelden</button><button class="secondary-button" type="button" id="signUpButton">Konto erstellen</button></div>
+            <div class="otp-panel" id="otpPanel" hidden>
+              <div class="otp-icon">✉</div>
+              <h3>Prüfe dein Postfach</h3>
+              <p>Wir haben dir einen sechsstelligen Bestätigungscode geschickt. Gib ihn hier ein, um dein Konto freizuschalten.</p>
+              <label for="otpCode">Dein E-Mail-Code</label>
+              <input id="otpCode" class="otp-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="••••••" aria-label="Sechsstelliger E-Mail-Code">
+              <button class="primary-button" type="button" id="verifyOtpButton">Code bestätigen</button>
+              <button class="text-button otp-resend" type="button" id="resendOtpButton">Code erneut senden</button>
+              <p class="otp-hint" id="otpHint" aria-live="polite">Der Code ist 5 Minuten gültig.</p>
+            </div>
+            <div class="auth-toast" id="authToast" role="status" aria-live="polite"></div>
             <p class="muted small-note" id="authStatus" role="status">Noch nicht angemeldet. Deine Daten liegen derzeit nur auf diesem Gerät.</p>
             <button class="danger-button" type="button" id="signOutButton" hidden>Abmelden</button>
           </div>
