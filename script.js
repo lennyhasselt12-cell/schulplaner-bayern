@@ -135,8 +135,19 @@ async function initSupabase(){
 }
 async function signInOrUp(mode){
   if(!supabaseClient){setAuthStatus("Supabase ist noch nicht konfiguriert. Bitte prüfe den Publishable Key.");return;}
-  const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value;
-  if(!email||password.length<8){setAuthStatus("Bitte E-Mail und ein Passwort mit mindestens 8 Zeichen eingeben.");return;}
+  const emailInput=document.getElementById("authEmail");
+  const passwordInput=document.getElementById("authPassword");
+  const email=emailInput.value.trim(),password=passwordInput.value;
+  if(!email || !emailInput.checkValidity()){
+    setAuthStatus("Bitte gib eine gültige E-Mail-Adresse ein.");
+    emailInput.focus();
+    return;
+  }
+  if(password.length<8){
+    setAuthStatus("Dein Passwort muss mindestens 8 Zeichen lang sein.");
+    passwordInput.focus();
+    return;
+  }
   setAuthStatus("Einen Moment …");
   try{
     const result=mode==="signup"
@@ -148,9 +159,8 @@ async function signInOrUp(mode){
       return;
     }
     if(result.data.user){
-      currentUser=result.data.user;
-      updateAuthUI();
-      try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Konto angemeldet, aber Cloud-Speicherung fehlgeschlagen: "+e.message)}
+      setAuthStatus("Anmeldung erfolgreich. Dein Konto wird geladen …");
+      // Die zentrale onAuthStateChange-Behandlung lädt die Cloud-Daten genau einmal.
     }
   }catch(e){
     setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen und erneut versuchen."));
