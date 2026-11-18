@@ -178,7 +178,6 @@ async function requestSignupCode(isResend=false){
       :"Du hast bereits einen Code angefordert. Eine zweite E-Mail kannst du in "+formatWait(gate.wait)+" anfordern.";
     setAuthStatus(message);showAuthToast(message);return;
   }
-  if(isResend&&gate.count===0){setAuthStatus("Bitte fordere zuerst einen Code über „Konto erstellen“ an.");return;}
   setAuthStatus(isResend?"Wir senden dir einen neuen Code …":"Wir erstellen dein Konto …");
   document.getElementById("signUpButton").disabled=true;
   try{
