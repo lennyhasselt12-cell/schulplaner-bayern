@@ -204,8 +204,8 @@ async function requestSignupCode(isResend=false){
     document.getElementById("otpHint").textContent=nextCount===1
       ?"Der Code ist 5 Minuten gültig. Eine zweite E-Mail kannst du nach 5 Minuten anfordern."
       :"Der neue Code ist 5 Minuten gültig. Eine weitere E-Mail ist erst in einer Stunde möglich.";
-    document.getElementById("resendOtpButton").disabled=nextCount>=2;
-    document.getElementById("resendOtpButton").textContent=nextCount>=2?"Keine weiteren E-Mails möglich":"Code erneut senden";
+    document.getElementById("resendOtpButton").disabled=false;
+    document.getElementById("resendOtpButton").textContent="Code erneut senden";
   }catch(e){
     setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen."));
   }finally{
