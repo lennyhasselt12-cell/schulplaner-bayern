@@ -169,7 +169,7 @@ async function requestSignupCode(isResend=false){
   if(!supabaseClient){setAuthStatus("Supabase ist noch nicht bereit. Bitte lade die Seite neu.");return;}
   const email=emailLimitKey(document.getElementById("authEmail").value);
   const password=document.getElementById("authPassword").value;
-  if(!email||!/^\\S+@\\S+\\.\\S+$/.test(email)||password.length<8){setAuthStatus("Bitte gib eine gültige E-Mail-Adresse und ein Passwort mit mindestens 8 Zeichen ein.");return;}
+  if(!email||!/^\S+@\S+\.\S+$/.test(email)||password.length<8){setAuthStatus("Bitte gib eine gültige E-Mail-Adresse und ein Passwort mit mindestens 8 Zeichen ein.");return;}
   if(!isResend&&pendingOtpEmail===email){
     const message="Du hast doch schon einen Code bekommen. Schau bitte in dein E-Mail-Postfach.";
     setAuthStatus(message);showAuthToast(message);return;
