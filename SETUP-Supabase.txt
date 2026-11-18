@@ -1,27 +1,33 @@
 SCHULPLANER – Supabase-Verbindung
 
-Diese Version ergänzt E-Mail-/Passwort-Anmeldung und speichert den kompletten Planer-Datensatz pro Benutzer in public.user_settings.settings (JSONB). Die bestehenden Tabellen subjects, teachers und timetable_entries bleiben zunächst ungenutzt.
+Diese Version enthält E-Mail-/Passwort-Anmeldung und speichert den kompletten Planer-Datensatz pro Benutzer in public.user_settings.settings (JSONB). Die Projekt-URL und der Publishable Key sind bereits in script.js eingetragen. Die Tabellen subjects, teachers und timetable_entries bleiben in dieser Version ungenutzt.
 
-1) In script.js oben diese Zeile suchen:
-   const SUPABASE_PUBLISHABLE_KEY = "HIER_DEIN_SUPABASE_PUBLISHABLE_KEY_EINFUEGEN";
-   Den Platzhalter durch den Publishable Key aus Supabase ersetzen. Die Projekt-URL ist bereits eingetragen.
-   WICHTIG: Nur den Publishable Key verwenden, niemals den Secret Key oder Service-Role-Key.
+WICHTIG ZUR DATENTRENNUNG
+- Beim Login wird ausschließlich der Datensatz mit der eigenen user_id geladen.
+- RLS muss für public.user_settings aktiviert sein.
+- Die SELECT-/INSERT-/UPDATE-Policies müssen authenticated Benutzer auf auth.uid() = user_id beschränken.
+- Die vorhandene Policy „Users manage own settings“ (FOR ALL) ist dafür geeignet, sofern USING und WITH CHECK jeweils auth.uid() = user_id verwenden.
+- Beim ersten Login auf einem Gerät können vorhandene Gastdaten übernommen werden.
+- Sobald auf dem Gerät bereits ein anderes Konto angemeldet war, wird für ein neues Konto ohne Cloud-Datensatz ein leerer eigener Datensatz angelegt. So werden lokale Daten nicht versehentlich zwischen Konten geteilt.
 
-2) In Supabase unter Authentication → URL Configuration:
-   Site URL: https://lennyhasselt12-cell.github.io
-   Redirect URLs: https://lennyhasselt12-cell.github.io/schulplaner-bayern/
-   (Falls der GitHub-Pages-Pfad bei dir anders lautet, entsprechend anpassen.)
+SUPABASE-EINSTELLUNGEN
+Authentication → URL Configuration:
+Site URL: https://lennyhasselt12-cell.github.io
+Redirect URL: https://lennyhasselt12-cell.github.io/schulplaner-bayern/
 
-3) Prüfen, dass public.user_settings RLS aktiviert hat und die SELECT/INSERT/UPDATE-Policy für authenticated Benutzer jeweils auth.uid() = user_id erlaubt. Die zuvor eingerichtete Policy „Users manage own settings“ mit FOR ALL sollte das abdecken.
-
-4) Die Dateien index.html, style.css und script.js (sowie diese Anleitung optional) im GitHub-Repository ersetzen und direkt nach main committen.
-
-5) Website öffnen → Profil → Konto erstellen. Bei aktivierter E-Mail-Bestätigung den Link aus der Bestätigungs-E-Mail öffnen. Danach mit E-Mail und Passwort anmelden.
-
-Datenverhalten:
-- Vor Anmeldung bleiben Daten lokal im Browser.
-- Beim ersten Login ohne vorhandenen Cloud-Datensatz werden die lokalen Daten in das eigene Konto kopiert.
+DATENVERHALTEN
+- Ohne Anmeldung bleiben Daten lokal im Browser.
+- Beim ersten Login werden lokale Gastdaten einmalig übernommen, sofern auf diesem Gerät noch kein anderes Konto als aktiver Nutzer gespeichert war.
 - Bei späteren Logins werden vorhandene Cloud-Daten geladen und lokale Daten damit ersetzt.
-- Änderungen werden automatisch lokal und nach kurzer Verzögerung online gespeichert.
+- Änderungen werden lokal und nach kurzer Verzögerung online gespeichert.
+- Dasselbe Konto kann auf mehreren Geräten verwendet werden. Die Geräte laden denselben Cloud-Datensatz.
+- Unterschiedliche Konten erhalten getrennte Datensätze. Die tatsächliche Sicherheit hängt zusätzlich von korrekt aktivierten RLS-Policies ab.
 
-Hinweis: Die App verwendet vorerst die Tabelle user_settings als JSONB-Speicher für alle App-Daten. Die separaten Tabellen subjects, teachers und timetable_entries sind noch nicht angebunden. Vor Nutzung mit echten persönlichen Daten bitte mit Testdaten prüfen.
+DATEIEN
+Die ZIP enthält index.html, style.css, script.js und diese Anleitung. Alle vier Dateien können im GitHub-Repository ersetzt werden.
+
+SICHERHEIT
+Nur den Publishable Key im Frontend verwenden. Niemals den Supabase Secret Key oder Service-Role-Key veröffentlichen.
+
+TEST
+Nach dem Commit: Konto A anmelden, Testfach und Teststunde anlegen, abmelden, Konto B anmelden und prüfen, dass A-Daten nicht erscheinen. Anschließend Konto A auf einem zweiten Gerät anmelden und die Synchronisierung in beide Richtungen prüfen. Erst danach echte Daten verwenden.

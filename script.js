@@ -1,4 +1,5 @@
 const KEY = "schulplaner-preview-v1";
+const ACTIVE_USER_KEY = KEY + "-active-user";
 // Supabase-Projektdaten hier eintragen (Projekt-URL + Publishable Key, niemals Service-Role-Key).
 const SUPABASE_URL = "https://wygkjvofgelfttdfjfcl.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_3jRUceLgBkmqgw0azhSUoA_yZEick5a";
@@ -16,6 +17,9 @@ let longPressTimer = null;
 let longPressTriggered = false;
 let subjectLongPressTimer = null;
 
+function emptyData(){
+  return {profile:{},grades:[],lessons:[],materials:[],exams:[],theme:"dark",subjects:[],teachers:[],studyNotes:{}};
+}
 function loadData(){
   try {
     const d = JSON.parse(localStorage.getItem(KEY)) || {};
@@ -24,7 +28,7 @@ function loadData(){
       exams:d.exams||[], theme:d.theme||"dark", subjects:d.subjects||[], teachers:d.teachers||[], studyNotes:d.studyNotes||{}
     };
   } catch {
-    return {profile:{},grades:[],lessons:[],materials:[],exams:[],theme:"dark",subjects:[],teachers:[],studyNotes:{}};
+    return emptyData();
   }
 }
 function save(){
@@ -34,12 +38,15 @@ function save(){
 }
 function scheduleCloudSave(){
   clearTimeout(cloudSaveTimer);
+  const savingUserId=currentUser?.id;
+  const snapshot=JSON.parse(JSON.stringify(data));
   cloudSaveTimer=setTimeout(async()=>{
+    if(!savingUserId || !currentUser || currentUser.id!==savingUserId || !cloudReady) return;
     try{
-      const {error}=await supabaseClient.from("user_settings").upsert({user_id:currentUser.id,settings:{app_data:data},updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      const {error}=await supabaseClient.from("user_settings").upsert({user_id:savingUserId,settings:{app_data:snapshot},updated_at:new Date().toISOString()},{onConflict:"user_id"});
       if(error) throw error;
-      setAuthStatus("Online gespeichert ✓");
-    }catch(err){console.error(err);setAuthStatus("Online-Speicherung fehlgeschlagen: "+(err.message||"Unbekannter Fehler"));}
+      if(currentUser?.id===savingUserId) setAuthStatus("Online gespeichert ✓");
+    }catch(err){console.error(err);if(currentUser?.id===savingUserId)setAuthStatus("Online-Speicherung fehlgeschlagen: "+(err.message||"Unbekannter Fehler"));}
   },500);
 }
 function setAuthStatus(message){const el=document.getElementById("authStatus");if(el)el.textContent=message;}
@@ -54,23 +61,37 @@ function updateAuthUI(){
 }
 async function loadCloudData(){
   if(!currentUser)return;
+  const loadingUserId=currentUser.id;
+  cloudReady=false;
+  clearTimeout(cloudSaveTimer);
   setAuthStatus("Lade deine gespeicherten Daten …");
-  const {data:row,error}=await supabaseClient.from("user_settings").select("settings").eq("user_id",currentUser.id).maybeSingle();
+  const {data:row,error}=await supabaseClient.from("user_settings").select("settings").eq("user_id",loadingUserId).maybeSingle();
   if(error)throw error;
+  // Ein zwischenzeitlicher Kontowechsel darf niemals Daten des alten Kontos überschreiben.
+  if(!currentUser || currentUser.id!==loadingUserId)return;
   if(row?.settings?.app_data){
     const remote=row.settings.app_data;
     data={profile:remote.profile||{},grades:remote.grades||[],lessons:remote.lessons||[],materials:remote.materials||[],exams:remote.exams||[],theme:remote.theme||"dark",subjects:remote.subjects||[],teachers:remote.teachers||[],studyNotes:remote.studyNotes||{}};
-    localStorage.setItem(KEY,JSON.stringify(data));
-    render();
     setAuthStatus("Deine Online-Daten wurden geladen ✓");
   }else{
+    // Nur beim allerersten Konto auf diesem Gerät werden vorhandene Gastdaten übernommen.
+    // Bei einem anderen/neuen Konto wird mit einem leeren Datensatz begonnen.
+    const previousUserId=localStorage.getItem(ACTIVE_USER_KEY);
+    if(previousUserId && previousUserId!==loadingUserId) data=emptyData();
     const {error:insertError}=await supabaseClient.from("user_settings").upsert(
-      {user_id:currentUser.id,settings:{app_data:data},updated_at:new Date().toISOString()},
+      {user_id:loadingUserId,settings:{app_data:data},updated_at:new Date().toISOString()},
       {onConflict:"user_id"}
     );
     if(insertError) throw insertError;
-    setAuthStatus("Konto verbunden. Deine bisherigen Gerätedaten wurden erstmals online gespeichert ✓");
+    if(!currentUser || currentUser.id!==loadingUserId)return;
+    setAuthStatus(previousUserId && previousUserId!==loadingUserId
+      ? "Neues Konto verbunden. Ein eigener leerer Datensatz wurde angelegt ✓"
+      : "Konto verbunden. Deine bisherigen Gerätedaten wurden erstmals online gespeichert ✓");
   }
+  if(!currentUser || currentUser.id!==loadingUserId)return;
+  localStorage.setItem(KEY,JSON.stringify(data));
+  localStorage.setItem(ACTIVE_USER_KEY,loadingUserId);
+  render();
   cloudReady=true;
 }
 async function initSupabase(){
@@ -84,7 +105,8 @@ async function initSupabase(){
     updateAuthUI();
     if(currentUser){try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
     supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
-      currentUser=session?.user||null;cloudReady=false;updateAuthUI();
+      clearTimeout(cloudSaveTimer);cloudReady=false;
+      currentUser=session?.user||null;updateAuthUI();
       if(currentUser){try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
       else setAuthStatus("Abgemeldet. Daten auf diesem Gerät bleiben erhalten.");
     });
@@ -133,7 +155,7 @@ document.querySelectorAll("[data-goto]").forEach(b=>b.addEventListener("click",(
 document.getElementById("profileButton").onclick=()=>go("profile");
 document.getElementById("signInButton").onclick=()=>signInOrUp("signin");
 document.getElementById("signUpButton").onclick=()=>signInOrUp("signup");
-document.getElementById("signOutButton").onclick=async()=>{if(supabaseClient)await supabaseClient.auth.signOut();currentUser=null;cloudReady=false;updateAuthUI();setAuthStatus("Abgemeldet. Deine Daten auf diesem Gerät bleiben erhalten.");};
+document.getElementById("signOutButton").onclick=async()=>{clearTimeout(cloudSaveTimer);cloudReady=false;if(supabaseClient)await supabaseClient.auth.signOut();currentUser=null;updateAuthUI();setAuthStatus("Abgemeldet. Deine Daten auf diesem Gerät bleiben erhalten.");};
 document.getElementById("menuToggle").onclick=()=>document.querySelector(".sidebar").classList.toggle("open");
 document.getElementById("themeToggle").onclick=()=>{data.theme=data.theme==="light"?"dark":"light";save()};
 
