@@ -21,10 +21,10 @@ function loadData(){
     const d = JSON.parse(localStorage.getItem(KEY)) || {};
     return {
       profile:d.profile||{}, grades:d.grades||[], lessons:d.lessons||[], materials:d.materials||[],
-      exams:d.exams||[], theme:d.theme||"dark", subjects:d.subjects||[], teachers:d.teachers||[]
+      exams:d.exams||[], theme:d.theme||"dark", subjects:d.subjects||[], teachers:d.teachers||[], studyNotes:d.studyNotes||{}
     };
   } catch {
-    return {profile:{},grades:[],lessons:[],materials:[],exams:[],theme:"dark",subjects:[],teachers:[]};
+    return {profile:{},grades:[],lessons:[],materials:[],exams:[],theme:"dark",subjects:[],teachers:[],studyNotes:{}};
   }
 }
 function save(){
@@ -59,7 +59,7 @@ async function loadCloudData(){
   if(error)throw error;
   if(row?.settings?.app_data){
     const remote=row.settings.app_data;
-    data={profile:remote.profile||{},grades:remote.grades||[],lessons:remote.lessons||[],materials:remote.materials||[],exams:remote.exams||[],theme:remote.theme||"dark",subjects:remote.subjects||[],teachers:remote.teachers||[]};
+    data={profile:remote.profile||{},grades:remote.grades||[],lessons:remote.lessons||[],materials:remote.materials||[],exams:remote.exams||[],theme:remote.theme||"dark",subjects:remote.subjects||[],teachers:remote.teachers||[],studyNotes:remote.studyNotes||{}};
     localStorage.setItem(KEY,JSON.stringify(data));
     render();
     setAuthStatus("Deine Online-Daten wurden geladen ✓");
@@ -492,5 +492,149 @@ function teacherAnswer(day){
  const ls=data.lessons.filter(x=>x.day===day&&x.teacher).sort((a,b)=>a.period-b.period);
  return ls.length?`${day} hast du folgende Lehrkräfte eingetragen: ${ls.map(x=>`${x.subject}: ${x.teacher}`).join("; ")}.`:`Für ${day} sind noch keine Lehrkräfte im Stundenplan zugeordnet.`;
 }
+
+// Lerncoach: arbeitet mit gespeicherten eigenen Notizen und einer kleinen Wissensbasis.
+let coachQuestions=[];
+let coachQuestionIndex=0;
+let coachLevel=1;
+let coachCorrect=0;
+let coachAnswered=false;
+const coachKnowledge={
+  "prozentrechnung":[
+    {q:"Was beschreibt der Grundwert?",a:"Das Ganze, auf das sich die Prozentangabe bezieht.",wrong:["Den Anteil vom Ganzen","Die Zahl der Prozentpunkte","Die Veränderung pro Zeiteinheit"],why:"Der Grundwert ist das Ganze und entspricht 100 %."},
+    {q:"Wie berechnet man den Prozentwert?",a:"Grundwert × Prozentsatz ÷ 100",wrong:["Grundwert ÷ Prozentsatz × 100","Prozentsatz ÷ Grundwert × 100","Grundwert + Prozentsatz"],why:"Der Prozentwert ist der Anteil: G · p / 100."},
+    {q:"Ein Pullover kostet 80 €. Der Rabatt beträgt 25 %. Wie hoch ist der Rabatt?",a:"20 €",wrong:["15 €","25 €","60 €"],why:"80 · 25 / 100 = 20 €. Der Rabatt beträgt 20 €."},
+    {q:"Ein Preis steigt von 50 € auf 60 €. Wie groß ist die prozentuale Erhöhung?",a:"20 %",wrong:["10 %","15 %","25 %"],why:"Die Erhöhung beträgt 10 €. Bezogen auf 50 € sind das 10 / 50 · 100 = 20 %."}
+  ],
+  "brueche":[
+    {q:"Was ist der Nenner eines Bruchs?",a:"Er gibt an, in wie viele gleich große Teile das Ganze geteilt ist.",wrong:["Er gibt an, wie viele Teile genommen werden","Er ist immer größer als der Zähler","Er zeigt den Wert als Prozentzahl"],why:"Der Nenner steht unten und beschreibt die Anzahl gleich großer Teile."},
+    {q:"Wie lautet 1/2 als Dezimalzahl?",a:"0,5",wrong:["0,2","0,25","1,2"],why:"1 geteilt durch 2 ergibt 0,5."},
+    {q:"Wie viel ist 1/4 + 1/4?",a:"1/2",wrong:["1/8","2/8","1/4"],why:"Bei gleichen Nennern addierst du die Zähler: 1/4 + 1/4 = 2/4 = 1/2."}
+  ],
+  "photosynthese":[
+    {q:"Was benötigen Pflanzen für die Fotosynthese?",a:"Licht, Wasser und Kohlenstoffdioxid.",wrong:["Sauerstoff, Zucker und Dunkelheit","Nur Wasser und Sauerstoff","Salz, Wärme und Stickstoff"],why:"Mit Lichtenergie wandeln Pflanzen Wasser und Kohlenstoffdioxid in energiereiche Stoffe um."},
+    {q:"Welches Gas geben Pflanzen bei der Fotosynthese ab?",a:"Sauerstoff",wrong:["Kohlenstoffdioxid","Stickstoff","Wasserstoff"],why:"Bei der Fotosynthese entsteht Sauerstoff, der an die Umgebung abgegeben wird."}
+  ],
+  "elektrizitaet":[
+    {q:"Was ist die Einheit der elektrischen Stromstärke?",a:"Ampere (A)",wrong:["Volt (V)","Ohm (Ω)","Watt (W)"],why:"Die Stromstärke wird in Ampere gemessen."},
+    {q:"Was misst ein Voltmeter?",a:"Die elektrische Spannung.",wrong:["Die Stromstärke","Den Widerstand direkt","Die elektrische Leistung"],why:"Ein Voltmeter misst die Spannung zwischen zwei Punkten."}
+  ]
+};
+function coachTopicKey(t){const s=normalized(t);if(s.includes("prozent"))return"prozentrechnung";if(s.includes("bruch"))return"brueche";if(s.includes("photo"))return"photosynthese";if(s.includes("elektr")||s.includes("strom")||s.includes("spannung"))return"elektrizitaet";return""}
+function coachSaveNotes(){
+  const topic=document.getElementById("coachTopic").value.trim();
+  const notes=document.getElementById("coachNotes").value.trim();
+  if(!topic&&!notes){document.getElementById("coachStatus").textContent="Bitte gib mindestens ein Thema oder Notizen ein.";return}
+  const key=topic||"Allgemeine Notizen";
+  data.studyNotes=data.studyNotes||{};
+  data.studyNotes[key]={topic,notes,updatedAt:new Date().toISOString()};
+  save();
+  document.getElementById("coachStatus").textContent="Notizen gespeichert ✓";
+}
+function coachLoadNotes(){
+  const topic=document.getElementById("coachTopic").value.trim();
+  const saved=data.studyNotes||{};
+  const match=Object.values(saved).find(x=>normalized(x.topic||"")===normalized(topic));
+  if(match)document.getElementById("coachNotes").value=match.notes||"";
+}
+function coachExplain(){
+  const topic=document.getElementById("coachTopic").value.trim()||"dein Thema";
+  const notes=document.getElementById("coachNotes").value.trim();
+  const panel=document.getElementById("coachExplanationPanel");
+  const out=document.getElementById("coachExplanation");
+  const lines=notes.split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(Boolean);
+  let text="";
+  if(lines.length){
+    text="<h3>Aus deinen Notizen</h3><ul>"+lines.slice(0,12).map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+    text+="<p><strong>Lerntipp:</strong> Versuche, jede Aussage mit eigenen Worten zu erklären. Markiere Begriffe, die du noch nicht sicher erklären kannst.</p>";
+  }else{
+    const key=coachTopicKey(topic),bank=coachKnowledge[key];
+    if(bank){
+      text="<h3>"+esc(topic)+" – die Grundlagen</h3><ul>"+bank.map(x=>"<li><strong>"+esc(x.q)+"</strong><br>"+esc(x.a)+"</li>").join("")+"</ul>";
+      text+="<p><strong>Lerntipp:</strong> Erkläre zuerst die Grundidee laut in eigenen Worten und rechne oder beantworte danach ein Beispiel ohne Hilfe.</p>";
+    }else{
+      text="<p>Für <strong>"+esc(topic)+"</strong> habe ich noch keine passende allgemeine Erklärung in meiner kleinen Offline-Wissensbasis. Füge deine Hefteinträge oder einen Lernzettel oben ein. Dann kann ich daraus Lernfragen bilden.</p>";
+    }
+  }
+  out.innerHTML=text;
+  panel.hidden=false;
+}
+function coachBuildQuestions(){
+  const topic=document.getElementById("coachTopic").value.trim()||"dein Thema";
+  const notes=document.getElementById("coachNotes").value.trim();
+  const facts=notes.split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.split(/\s+/).length>=6);
+  const key=coachTopicKey(topic);
+  let qs=[];
+  if(facts.length){
+    const chosen=facts.slice(0,8);
+    qs=chosen.map((fact,i)=>{
+      const words=fact.replace(/[“”„"()]/g,"").split(/\s+/);
+      const candidates=words.filter(w=>w.length>=5&&!/^(diese|dieser|welche|wurde|werden|haben|einer|eines|einem|einen|damit|dabei|durch)$/i.test(w));
+      const answer=(candidates.sort((a,b)=>b.length-a.length)[0]||words[Math.max(1,Math.floor(words.length/2))]).replace(/[.,;:!?]+$/,"");
+      const masked=fact.replace(new RegExp(answer.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i"),"________");
+      const pool=[...new Set(words.filter(w=>w.length>=4&&w.toLowerCase()!==answer.toLowerCase()))].slice(0,3);
+      while(pool.length<3)pool.push(["Beispiel","Vorgang","Ergebnis","Begriff","Ursache"][pool.length]);
+      const options=[answer,...pool].sort(()=>Math.random()-.5);
+      return {q:"Ergänze den fehlenden Begriff: "+masked,a:answer,options,why:"In deinen Notizen steht: „"+fact+"“.",difficulty:words.length};
+    });
+  } else if(key) qs=coachKnowledge[key].map(x=>({q:x.q,a:x.a,options:[x.a,...x.wrong].sort(()=>Math.random()-.5),why:x.why}));
+  return qs;
+}
+function coachStart(){
+  coachSaveNotes();
+  coachQuestions=coachBuildQuestions();
+  if(!coachQuestions.length){
+    document.getElementById("coachStatus").textContent="Ich brauche Notizen mit ein paar vollständigen Sätzen oder ein Thema aus der Offline-Wissensbasis (Prozentrechnung, Brüche, Fotosynthese oder Elektrizität).";
+    return;
+  }
+  coachQuestionIndex=0;coachLevel=1;coachCorrect=0;coachAnswered=false;
+  document.getElementById("coachQuizPanel").hidden=false;
+  coachRenderQuestion();
+  document.getElementById("coachQuizPanel").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function coachRenderQuestion(){
+  const q=coachQuestions[coachQuestionIndex];if(!q)return;
+  coachAnswered=false;
+  document.getElementById("coachQuizTitle").textContent="Frage "+(coachQuestionIndex+1)+" von "+coachQuestions.length;
+  document.getElementById("coachLevel").textContent="Level "+coachLevel+" · "+(coachLevel===1?"Einstieg":coachLevel===2?"Vertiefung":"Knifflig");
+  document.getElementById("coachProgressFill").style.width=(coachQuestionIndex/coachQuestions.length*100)+"%";
+  document.getElementById("coachQuestion").textContent=q.q;
+  document.getElementById("coachFeedback").textContent="";
+  document.getElementById("coachOptions").innerHTML=q.options.map((o,i)=>'<button type="button" class="coach-option" data-coach-option="'+i+'">'+esc(o)+'</button>').join("");
+  document.querySelectorAll("[data-coach-option]").forEach(b=>b.onclick=()=>coachAnswer(Number(b.dataset.coachOption)));
+  document.getElementById("coachNextButton").disabled=true;
+  document.getElementById("coachNextButton").textContent=coachQuestionIndex===coachQuestions.length-1?"Ergebnis anzeigen":"Nächste Frage";
+  document.getElementById("coachScore").textContent="Richtig: "+coachCorrect+" von "+coachQuestionIndex+" beantworteten Fragen.";
+}
+function coachAnswer(index){
+  if(coachAnswered)return;coachAnswered=true;
+  const q=coachQuestions[coachQuestionIndex],chosen=q.options[index],correct=normalized(chosen)===normalized(q.a);
+  if(correct){coachCorrect++;coachLevel=Math.min(3,coachLevel+1)}else{coachLevel=Math.max(1,coachLevel-1)}
+  document.querySelectorAll("[data-coach-option]").forEach((b,i)=>{b.disabled=true;if(normalized(q.options[i])===normalized(q.a))b.classList.add("is-correct");else if(i===index)b.classList.add("is-wrong")});
+  document.getElementById("coachFeedback").textContent=(correct?"Richtig! ":"Noch nicht ganz. Die passende Antwort ist: "+q.a+". ")+q.why;
+  document.getElementById("coachNextButton").disabled=false;
+  document.getElementById("coachScore").textContent="Richtig: "+coachCorrect+" von "+(coachQuestionIndex+1)+" · aktuelles Level "+coachLevel+".";
+}
+function coachNext(){
+  if(coachQuestionIndex<coachQuestions.length-1){
+    const remaining=coachQuestions.slice(coachQuestionIndex+1);
+    remaining.sort((a,b)=>coachLevel===1?a.difficulty-b.difficulty:b.difficulty-a.difficulty);
+    coachQuestions.splice(coachQuestionIndex+1,remaining.length,...remaining);
+    coachQuestionIndex++;coachRenderQuestion();return
+  }
+  document.getElementById("coachQuestion").textContent="Geschafft! Du hast "+coachCorrect+" von "+coachQuestions.length+" Fragen richtig beantwortet.";
+  document.getElementById("coachOptions").innerHTML="";
+  document.getElementById("coachFeedback").textContent=coachCorrect===coachQuestions.length?"Stark! Du kannst die Fragen beim nächsten Mal auf einem höheren Level angehen.":"Schau dir die Erklärungen zu den falschen Antworten noch einmal an und starte eine neue Runde.";
+  document.getElementById("coachProgressFill").style.width="100%";
+  document.getElementById("coachNextButton").disabled=true;
+  document.getElementById("coachScore").textContent="Ergebnis: "+coachCorrect+"/"+coachQuestions.length+" richtig.";
+}
+document.getElementById("coachSaveButton").addEventListener("click",coachSaveNotes);
+document.getElementById("coachTopic").addEventListener("change",coachLoadNotes);
+document.getElementById("coachExplainButton").addEventListener("click",coachExplain);
+document.getElementById("coachStartButton").addEventListener("click",coachStart);
+document.getElementById("coachNextButton").addEventListener("click",coachNext);
+document.getElementById("coachStopButton").addEventListener("click",()=>{document.getElementById("coachQuizPanel").hidden=true});
+
 render();
 initSupabase();

@@ -217,3 +217,23 @@ button,input,select{font:inherit}button{cursor:pointer}.app-shell{min-height:100
   touch-action: pan-y;
   cursor: default;
 }
+
+
+/* Lerncoach */
+.coach-setup .form-grid { gap: 16px; }
+.coach-setup textarea { width:100%; min-height:145px; resize:vertical; }
+.coach-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.coach-output[hidden], .coach-quiz[hidden] { display:none; }
+.coach-answer { line-height:1.7; }
+.coach-answer h3 { margin:4px 0 10px; }
+.coach-answer li { margin:8px 0; }
+.coach-question { font-size:1.12rem; font-weight:700; line-height:1.55; margin:20px 0; }
+.coach-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.coach-option { border:1px solid var(--line); border-radius:13px; background:var(--surface2); color:var(--text); padding:13px 15px; text-align:left; cursor:pointer; font:inherit; }
+.coach-option:disabled { cursor:default; opacity:1; }
+.coach-option.is-correct { border-color:#2e9b68; background:rgba(46,155,104,.13); }
+.coach-option.is-wrong { border-color:#d65c5c; background:rgba(214,92,92,.12); }
+.coach-feedback { min-height:26px; line-height:1.55; margin:16px 0; }
+.coach-progress { height:8px; border-radius:99px; background:var(--surface2); overflow:hidden; margin:12px 0 18px; }
+.coach-progress div { height:100%; width:0; background:var(--accent); transition:width .25s ease; }
+@media (max-width:650px) { .coach-options { grid-template-columns:1fr; } .coach-actions > button { width:100%; } }
