@@ -416,6 +416,7 @@ function schoolDayForDate(date){const index=(date.getDay()+6)%7;return index<5?d
 function normalized(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[?!.,;:]/g," ").replace(/\s+/g," ").trim()}
 function includesAny(s,words){return words.some(w=>s.includes(w))}
 function scheduleAnswer(day){
+ if(!day)return "Heute ist Wochenende. Dein Stundenplan enthält Unterricht von Montag bis Freitag.";
  const ls=data.lessons.filter(x=>x.day===day).sort((a,b)=>a.period-b.period);
  return ls.length?`${day} hast du ${ls.map(x=>`${x.period}. Stunde ${x.subject}${x.teacher?", bei "+x.teacher:""}`).join("; ")}.`:`Für ${day} ist noch kein Unterricht eingetragen.`;
 }
@@ -543,6 +544,7 @@ async function answerQuestion(q){
  return "Ich habe deine Frage noch nicht ganz verstanden. Du kannst mich zum Beispiel fragen: „Was habe ich morgen?“, „Was habe ich am Freitag in der 2. Stunde?“, „Wie ist mein Mathe-Schnitt?“, „Wann ist meine nächste Probe?“ oder „Was muss ich für Englisch mitbringen?“";
 }
 function teacherAnswer(day){
+ if(!day)return "Heute ist Wochenende. Dein Stundenplan enthält Unterricht von Montag bis Freitag.";
  const ls=data.lessons.filter(x=>x.day===day&&x.teacher).sort((a,b)=>a.period-b.period);
  return ls.length?`${day} hast du folgende Lehrkräfte eingetragen: ${ls.map(x=>`${x.subject}: ${x.teacher}`).join("; ")}.`:`Für ${day} sind noch keine Lehrkräfte im Stundenplan zugeordnet.`;
 }
