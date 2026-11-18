@@ -259,13 +259,6 @@ body.light .chat-form input,
 body.light .coach-setup textarea {
   color-scheme: light;
 }
-body.light .form-grid textarea,
-body.light .form-grid input,
-body.light .form-grid select,
-body.light .chat-form input,
-body.light .coach-setup textarea {
-  color-scheme: light;
-}
 .form-grid textarea::placeholder,
 .form-grid input::placeholder,
 .chat-form input::placeholder,
