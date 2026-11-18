@@ -7,6 +7,7 @@ let supabaseClient = null;
 let currentUser = null;
 let cloudSaveTimer = null;
 let cloudReady = false;
+let cloudSaveInFlight = false;
 const days = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
 const periods = [1,2,3,4,5,6,7,8,9];
 let data = loadData();
@@ -46,12 +47,18 @@ function scheduleCloudSave(){
   const savingUserId=currentUser?.id;
   const snapshot=JSON.parse(JSON.stringify(data));
   cloudSaveTimer=setTimeout(async()=>{
+    cloudSaveTimer=null;
     if(!savingUserId || !currentUser || currentUser.id!==savingUserId || !cloudReady) return;
+    cloudSaveInFlight=true;
     try{
       const {error}=await supabaseClient.from("user_settings").upsert({user_id:savingUserId,settings:{app_data:snapshot},updated_at:new Date().toISOString()},{onConflict:"user_id"});
       if(error) throw error;
       if(currentUser?.id===savingUserId) setAuthStatus("Online gespeichert ✓");
     }catch(err){console.error(err);if(currentUser?.id===savingUserId)setAuthStatus("Online-Speicherung fehlgeschlagen: "+(err.message||"Unbekannter Fehler"));}
+    finally{
+      cloudSaveInFlight=false;
+      if(currentUser?.id===savingUserId && cloudReady && JSON.stringify(data)!==JSON.stringify(snapshot)) scheduleCloudSave();
+    }
   },500);
 }
 function setAuthStatus(message){const el=document.getElementById("authStatus");if(el)el.textContent=message;}
@@ -269,7 +276,7 @@ function render(){
   const avg=data.grades.length?(data.grades.reduce((a,x)=>a+x.grade,0)/data.grades.length).toFixed(2).replace(".",","):"—";
   document.getElementById("average").textContent=avg;document.getElementById("gradeTotal").textContent=`${data.grades.length} Einträge`;
   document.getElementById("gradeRows").innerHTML=data.grades.length?data.grades.map(x=>`<tr><td>${esc(x.subject)}</td><td><span class="grade-badge">${x.grade}</span></td><td>${esc(x.type)}</td><td><button class="delete-button" data-remove="grades" data-id="${x.id}">Löschen</button></td></tr>`).join(""):'<tr><td colspan="4" class="table-empty">Noch keine Noten vorhanden.</td></tr>';
-  const todayKey=new Date().toISOString().slice(0,10);
+  const todayKey=localDateKey(new Date());
   const upcoming=[...data.exams].filter(x=>x.date>=todayKey).sort((a,b)=>a.date.localeCompare(b.date));
   document.getElementById("nextExam").textContent=upcoming[0]?new Date(upcoming[0].date+"T12:00:00").toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit"}):"—";
   const today=days[(new Date().getDay()+6)%7],todayLessons=data.lessons.filter(x=>x.day===today).sort((a,b)=>a.period-b.period);
@@ -403,6 +410,8 @@ document.getElementById("chatForm").addEventListener("submit",async e=>{
 });
 document.querySelectorAll("[data-question]").forEach(b=>b.addEventListener("click",()=>{document.getElementById("chatInput").value=b.dataset.question;document.getElementById("chatForm").requestSubmit()}));
 function addChat(text,kind,extraClass=""){const box=document.getElementById("chatLog"),div=document.createElement("div");div.className="chat-message "+kind+(extraClass?" "+extraClass:"");div.textContent=text;box.appendChild(div);box.scrollTop=box.scrollHeight}
+function localDateKey(date){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");return `${y}-${m}-${d}`}
+function schoolDayForDate(date){const index=(date.getDay()+6)%7;return index<5?days[index]:null}
 function normalized(s){return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[?!.,;:]/g," ").replace(/\s+/g," ").trim()}
 function includesAny(s,words){return words.some(w=>s.includes(w))}
 function scheduleAnswer(day){
@@ -429,10 +438,10 @@ function weatherLabel(code){
 function findRequestedDay(s,now){
  const map={"montag":"Montag","dienstag":"Dienstag","mittwoch":"Mittwoch","donnerstag":"Donnerstag","freitag":"Freitag"};
  for(const [key,value] of Object.entries(map))if(s.includes(key))return value;
- if(s.includes("ubermorgen")||s.includes("übermorgen"))return days[(now.getDay()+1)%7];
- if(s.includes("morgen"))return days[now.getDay()%7];
- if(s.includes("heute"))return days[(now.getDay()+6)%7];
- return null;
+ const offset=(s.includes("ubermorgen")||s.includes("übermorgen"))?2:s.includes("morgen")?1:s.includes("heute")?0:null;
+ if(offset===null)return null;
+ const date=new Date(now);date.setDate(date.getDate()+offset);
+ return schoolDayForDate(date);
 }
 function formatDate(iso){
  const d=new Date(iso+"T12:00:00");
@@ -451,7 +460,7 @@ function gradeSummary(subjectName=null){
  return out;
 }
 async function answerQuestion(q){
- const s=normalized(q),now=new Date(),today=days[(now.getDay()+6)%7],requestedDay=findRequestedDay(s,now);
+ const s=normalized(q),now=new Date(),today=schoolDayForDate(now),requestedDay=findRequestedDay(s,now);
  const subject=data.subjects.find(x=>s.includes(normalized(x.name)));
  const hourMatch=s.match(/(?:\b|^)(\d{1,2})\.?\s*(?:stunde|std|unterrichtsstunde)(?:\b|$)/);
  const requestedHour=hourMatch?Number(hourMatch[1]):null;
@@ -467,7 +476,7 @@ async function answerQuestion(q){
  }
 
  if(includesAny(s,["probe","termin","test","schulaufgabe","ste greif","examen","wann schreibe","wann ist"])){
-   const upcoming=[...data.exams].filter(x=>x.date>=now.toISOString().slice(0,10)).sort((a,b)=>a.date.localeCompare(b.date));
+   const upcoming=[...data.exams].filter(x=>x.date>=localDateKey(now)).sort((a,b)=>a.date.localeCompare(b.date));
    if(subject){
      const related=upcoming.filter(x=>normalized(x.title).includes(normalized(subject.name)));
      if(related.length)return `Für ${subject.name} ist als nächster Termin ${related[0].title} am ${formatDate(related[0].date)} eingetragen.`;
@@ -619,11 +628,13 @@ function coachBuildQuestions(){
       const options=[answer,...pool].sort(()=>Math.random()-.5);
       return {q:"Ergänze den fehlenden Begriff: "+masked,a:answer,options,why:"In deinen Notizen steht: „"+fact+"“.",difficulty:words.length};
     });
-  } else if(key) qs=coachKnowledge[key].map(x=>({q:x.q,a:x.a,options:[x.a,...x.wrong].sort(()=>Math.random()-.5),why:x.why}));
+  } else if(key) qs=coachKnowledge[key].map((x,i)=>({q:x.q,a:x.a,options:[x.a,...x.wrong].sort(()=>Math.random()-.5),why:x.why,difficulty:i+1}));
   return qs;
 }
 function coachStart(){
-  coachSaveNotes();
+  const topic=document.getElementById("coachTopic").value.trim();
+  const notes=document.getElementById("coachNotes").value.trim();
+  if(topic || notes) coachSaveNotes();
   coachQuestions=coachBuildQuestions();
   if(!coachQuestions.length){
     document.getElementById("coachStatus").textContent="Ich brauche Notizen mit ein paar vollständigen Sätzen oder ein Thema aus der Offline-Wissensbasis (Prozentrechnung, Brüche, Fotosynthese oder Elektrizität).";
@@ -684,7 +695,7 @@ initSupabase();
 
 // Beim Zurückkehren zur Website aktuelle Cloud-Daten laden (z. B. nach Änderungen auf einem anderen Gerät).
 async function refreshCloudOnReturn(){
-  if(!currentUser || !supabaseClient || !cloudReady || cloudSaveTimer) return;
+  if(!currentUser || !supabaseClient || !cloudReady || cloudSaveTimer || cloudSaveInFlight) return;
   try{
     const userId=currentUser.id;
     const {data:row,error}=await supabaseClient.from("user_settings").select("settings").eq("user_id",userId).maybeSingle();
