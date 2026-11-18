@@ -101,11 +101,23 @@
 
       <section class="page" id="page-profile">
         <div class="page-heading"><div><p class="eyebrow">DEINE EINSTELLUNGEN</p><h1>Profil</h1><p class="muted">Deine Angaben für diese Vorschau.</p></div></div>
-        <article class="panel profile-panel"><h2>Profil bearbeiten</h2><form id="profileForm" class="form-grid"><label>Vorname<input id="firstName" required maxlength="40"></label><label>Nachname<input id="lastName" required maxlength="40"></label><label>Schule<input id="school" required maxlength="80" placeholder="Für den Test bitte keine echte Schule eintragen"></label><label>Klasse<input id="className" required maxlength="20" placeholder="z. B. 8a"></label><label>Schulart<select id="schoolType"><option>Mittelschule</option><option>Realschule</option><option>Gymnasium</option><option>Berufsschule</option><option>Andere</option></select></label><label>Angestrebter Abschluss<select id="targetDegree"><option>Noch offen</option><option>Erfolgreicher Abschluss</option><option>Qualifizierender Abschluss</option><option>Mittlerer Schulabschluss</option><option>Abitur</option><option>Anderer Abschluss</option></select></label><button class="primary-button" type="submit">Profil speichern</button></form><p class="muted small-note">Wichtig: In dieser Vorschau gibt es noch keine echte Anmeldung. Gib hier keine echten Passwörter oder sensiblen persönlichen Daten ein.</p><button class="danger-button" id="resetButton">Alle lokalen Testdaten löschen</button></article>
+        <article class="panel profile-panel">
+          <h2>Online-Konto</h2>
+          <p class="muted small-note">Melde dich mit E-Mail und Passwort an. Nach der Anmeldung werden deine Planerdaten in deinem privaten Supabase-Konto gespeichert.</p>
+          <div class="form-grid" id="authPanel">
+            <label>E-Mail-Adresse<input id="authEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
+            <label>Passwort<input id="authPassword" type="password" minlength="8" autocomplete="current-password" placeholder="Mindestens 8 Zeichen"></label>
+            <div class="auth-actions"><button class="primary-button" type="button" id="signInButton">Anmelden</button><button class="secondary-button" type="button" id="signUpButton">Konto erstellen</button></div>
+            <p class="muted small-note" id="authStatus" role="status">Noch nicht angemeldet. Deine Daten liegen derzeit nur auf diesem Gerät.</p>
+            <button class="danger-button" type="button" id="signOutButton" hidden>Abmelden</button>
+          </div>
+          <hr class="panel-divider">
+          <h2>Profil bearbeiten</h2><form id="profileForm" class="form-grid"><label>Vorname<input id="firstName" required maxlength="40"></label><label>Nachname<input id="lastName" required maxlength="40"></label><label>Schule<input id="school" required maxlength="80" placeholder="Für den Test bitte keine echte Schule eintragen"></label><label>Klasse<input id="className" required maxlength="20" placeholder="z. B. 8a"></label><label>Schulart<select id="schoolType"><option>Mittelschule</option><option>Realschule</option><option>Gymnasium</option><option>Berufsschule</option><option>Andere</option></select></label><label>Angestrebter Abschluss<select id="targetDegree"><option>Noch offen</option><option>Erfolgreicher Abschluss</option><option>Qualifizierender Abschluss</option><option>Mittlerer Schulabschluss</option><option>Abitur</option><option>Anderer Abschluss</option></select></label><button class="primary-button" type="submit">Profil speichern</button></form><p class="muted small-note">Dein Profil wird zusammen mit deinen Planerdaten gespeichert.</p><button class="danger-button" id="resetButton">Alle lokalen Testdaten löschen</button></article>
       </section>
       <footer>Schulplaner · Erste Vorschau · kostenlos geplant</footer>
     </main>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
 </html>

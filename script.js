@@ -1,4 +1,11 @@
 const KEY = "schulplaner-preview-v1";
+// Supabase-Projektdaten hier eintragen (Projekt-URL + Publishable Key, niemals Service-Role-Key).
+const SUPABASE_URL = "https://wygkjvofgelfttdfjfcl.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "HIER_DEIN_SUPABASE_PUBLISHABLE_KEY_EINFUEGEN";
+let supabaseClient = null;
+let currentUser = null;
+let cloudSaveTimer = null;
+let cloudReady = false;
 const days = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag"];
 const periods = [1,2,3,4,5,6,7,8,9];
 let data = loadData();
@@ -19,7 +26,72 @@ function loadData(){
     return {profile:{},grades:[],lessons:[],materials:[],exams:[],theme:"dark",subjects:[],teachers:[]};
   }
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(data));render()}
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(data));
+  render();
+  if(currentUser && cloudReady) scheduleCloudSave();
+}
+function scheduleCloudSave(){
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer=setTimeout(async()=>{
+    try{
+      const {error}=await supabaseClient.from("user_settings").upsert({user_id:currentUser.id,settings:{app_data:data},updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      if(error) throw error;
+      setAuthStatus("Online gespeichert ✓");
+    }catch(err){console.error(err);setAuthStatus("Online-Speicherung fehlgeschlagen: "+(err.message||"Unbekannter Fehler"));}
+  },500);
+}
+function setAuthStatus(message){const el=document.getElementById("authStatus");if(el)el.textContent=message;}
+function updateAuthUI(){
+  const signedIn=!!currentUser;
+  document.getElementById("signOutButton").hidden=!signedIn;
+  document.getElementById("signInButton").hidden=signedIn;
+  document.getElementById("signUpButton").hidden=signedIn;
+  document.getElementById("authEmail").disabled=signedIn;
+  document.getElementById("authPassword").disabled=signedIn;
+  if(signedIn)setAuthStatus("Angemeldet als "+currentUser.email+". Deine Daten werden online gespeichert.");
+}
+async function loadCloudData(){
+  if(!currentUser)return;
+  setAuthStatus("Lade deine gespeicherten Daten …");
+  const {data:row,error}=await supabaseClient.from("user_settings").select("settings").eq("user_id",currentUser.id).maybeSingle();
+  if(error)throw error;
+  if(row?.settings?.app_data){
+    const remote=row.settings.app_data;
+    data={profile:remote.profile||{},grades:remote.grades||[],lessons:remote.lessons||[],materials:remote.materials||[],exams:remote.exams||[],theme:remote.theme||"dark",subjects:remote.subjects||[],teachers:remote.teachers||[]};
+    localStorage.setItem(KEY,JSON.stringify(data));
+    render();
+    setAuthStatus("Deine Online-Daten wurden geladen ✓");
+  }else{
+    await supabaseClient.from("user_settings").upsert({user_id:currentUser.id,settings:{app_data:data},updated_at:new Date().toISOString()},{onConflict:"user_id"});
+    setAuthStatus("Konto verbunden. Deine bisherigen Gerätedaten wurden erstmals online gespeichert ✓");
+  }
+  cloudReady=true;
+}
+async function initSupabase(){
+  if(!window.supabase?.createClient){setAuthStatus("Supabase-Bibliothek konnte nicht geladen werden. Prüfe deine Internetverbindung.");return;}
+  if(SUPABASE_PUBLISHABLE_KEY.startsWith("HIER_DEIN_")){setAuthStatus("Supabase-Schlüssel fehlt noch. Wir tragen ihn als Nächstes ein.");return;}
+  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+  const {data:sessionData}=await supabaseClient.auth.getSession();
+  currentUser=sessionData.session?.user||null;
+  updateAuthUI();
+  if(currentUser){try{await loadCloudData()}catch(e){setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
+  supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
+    currentUser=session?.user||null;cloudReady=false;updateAuthUI();
+    if(currentUser){try{await loadCloudData()}catch(e){setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
+    else setAuthStatus("Abgemeldet. Daten auf diesem Gerät bleiben erhalten.");
+  });
+}
+async function signInOrUp(mode){
+  if(!supabaseClient){setAuthStatus("Supabase ist noch nicht konfiguriert. Der Publishable Key fehlt.");return;}
+  const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value;
+  if(!email||password.length<8){setAuthStatus("Bitte E-Mail und ein Passwort mit mindestens 8 Zeichen eingeben.");return;}
+  setAuthStatus("Einen Moment …");
+  const result=mode==="signup"?await supabaseClient.auth.signUp({email,password}):await supabaseClient.auth.signInWithPassword({email,password});
+  if(result.error){setAuthStatus(result.error.message);return;}
+  if(mode==="signup"&&!result.data.session){setAuthStatus("Konto erstellt. Bitte bestätige zuerst den Link in deiner E-Mail und melde dich danach an.");return;}
+  if(result.data.user){currentUser=result.data.user;updateAuthUI();try{await loadCloudData()}catch(e){setAuthStatus("Verbindung fehlgeschlagen: "+e.message)}}
+}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function val(id){return document.getElementById(id).value.trim()}
 function go(page){document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id==="page-"+page));document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.page===page));document.querySelector(".sidebar").classList.remove("open");window.scrollTo(0,0)}
@@ -35,6 +107,9 @@ ensureSubjects();
 document.querySelectorAll("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 document.querySelectorAll("[data-goto]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.goto)));
 document.getElementById("profileButton").onclick=()=>go("profile");
+document.getElementById("signInButton").onclick=()=>signInOrUp("signin");
+document.getElementById("signUpButton").onclick=()=>signInOrUp("signup");
+document.getElementById("signOutButton").onclick=async()=>{if(supabaseClient)await supabaseClient.auth.signOut();currentUser=null;cloudReady=false;updateAuthUI();setAuthStatus("Abgemeldet. Deine Daten auf diesem Gerät bleiben erhalten.");};
 document.getElementById("menuToggle").onclick=()=>document.querySelector(".sidebar").classList.toggle("open");
 document.getElementById("themeToggle").onclick=()=>{data.theme=data.theme==="light"?"dark":"light";save()};
 
@@ -287,3 +362,4 @@ function teacherAnswer(day){
  return ls.length?`${day} hast du folgende Lehrkräfte eingetragen: ${ls.map(x=>`${x.subject}: ${x.teacher}`).join("; ")}.`:`Für ${day} sind noch keine Lehrkräfte im Stundenplan zugeordnet.`;
 }
 render();
+initSupabase();

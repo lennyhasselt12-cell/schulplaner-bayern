@@ -1,0 +1,27 @@
+SCHULPLANER – Supabase-Verbindung
+
+Diese Version ergänzt E-Mail-/Passwort-Anmeldung und speichert den kompletten Planer-Datensatz pro Benutzer in public.user_settings.settings (JSONB). Die bestehenden Tabellen subjects, teachers und timetable_entries bleiben zunächst ungenutzt.
+
+1) In script.js oben diese Zeile suchen:
+   const SUPABASE_PUBLISHABLE_KEY = "HIER_DEIN_SUPABASE_PUBLISHABLE_KEY_EINFUEGEN";
+   Den Platzhalter durch den Publishable Key aus Supabase ersetzen. Die Projekt-URL ist bereits eingetragen.
+   WICHTIG: Nur den Publishable Key verwenden, niemals den Secret Key oder Service-Role-Key.
+
+2) In Supabase unter Authentication → URL Configuration:
+   Site URL: https://lennyhasselt12-cell.github.io
+   Redirect URLs: https://lennyhasselt12-cell.github.io/schulplaner-bayern/
+   (Falls der GitHub-Pages-Pfad bei dir anders lautet, entsprechend anpassen.)
+
+3) Prüfen, dass public.user_settings RLS aktiviert hat und die SELECT/INSERT/UPDATE-Policy für authenticated Benutzer jeweils auth.uid() = user_id erlaubt. Die zuvor eingerichtete Policy „Users manage own settings“ mit FOR ALL sollte das abdecken.
+
+4) Die Dateien index.html, style.css und script.js (sowie diese Anleitung optional) im GitHub-Repository ersetzen und direkt nach main committen.
+
+5) Website öffnen → Profil → Konto erstellen. Bei aktivierter E-Mail-Bestätigung den Link aus der Bestätigungs-E-Mail öffnen. Danach mit E-Mail und Passwort anmelden.
+
+Datenverhalten:
+- Vor Anmeldung bleiben Daten lokal im Browser.
+- Beim ersten Login ohne vorhandenen Cloud-Datensatz werden die lokalen Daten in das eigene Konto kopiert.
+- Bei späteren Logins werden vorhandene Cloud-Daten geladen und lokale Daten damit ersetzt.
+- Änderungen werden automatisch lokal und nach kurzer Verzögerung online gespeichert.
+
+Hinweis: Die App verwendet vorerst die Tabelle user_settings als JSONB-Speicher für alle App-Daten. Die separaten Tabellen subjects, teachers und timetable_entries sind noch nicht angebunden. Vor Nutzung mit echten persönlichen Daten bitte mit Testdaten prüfen.

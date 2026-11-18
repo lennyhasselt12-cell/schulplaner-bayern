@@ -175,3 +175,10 @@ button,input,select{font:inherit}button{cursor:pointer}.app-shell{min-height:100
     width: 100% !important;
   }
 }
+
+/* Konto-/Anmeldebereich */
+.auth-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.auth-actions button{flex:1;min-width:140px}
+.panel-divider{border:0;border-top:1px solid var(--border,rgba(148,163,184,.2));margin:22px 0}
+#authStatus{grid-column:1/-1;overflow-wrap:anywhere}
+#signOutButton{width:fit-content}
