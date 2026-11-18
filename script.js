@@ -169,46 +169,40 @@ async function requestSignupCode(isResend=false){
   if(!supabaseClient){setAuthStatus("Supabase ist noch nicht bereit. Bitte lade die Seite neu.");return;}
   const email=emailLimitKey(document.getElementById("authEmail").value);
   const password=document.getElementById("authPassword").value;
-  if(!email||!/^\S+@\S+\.\S+$/.test(email)||password.length<8){setAuthStatus("Bitte gib eine gültige E-Mail-Adresse und ein Passwort mit mindestens 8 Zeichen ein.");return;}
-  const limits=readOtpLimits(),entry=limits[email]||{count:0,lastSent:0,lockUntil:0};
-  const gate=otpRemaining(email);
-  if(!gate.allowed){
-    const message=gate.locked
-      ?"Du hast bereits zwei E-Mails angefordert. Bitte warte noch "+formatWait(gate.wait)+", bevor du es erneut versuchst."
-      :"Du hast bereits einen Code angefordert. Eine zweite E-Mail kannst du in "+formatWait(gate.wait)+" anfordern.";
+  if(!email||!/^\\S+@\\S+\\.\\S+$/.test(email)||password.length<8){setAuthStatus("Bitte gib eine gültige E-Mail-Adresse und ein Passwort mit mindestens 8 Zeichen ein.");return;}
+  if(!isResend&&pendingOtpEmail===email){
+    const message="Du hast doch schon einen Code bekommen. Schau bitte in dein E-Mail-Postfach.";
     setAuthStatus(message);showAuthToast(message);return;
   }
   setAuthStatus(isResend?"Wir senden dir einen neuen Code …":"Wir erstellen dein Konto …");
   document.getElementById("signUpButton").disabled=true;
+  document.getElementById("resendOtpButton").disabled=true;
   try{
-    let result;
-    const resendExisting=!!entry.lastSent;
-    if(!resendExisting){
-      result=await supabaseClient.auth.signUp({email,password});
-    }else{
-      result=await supabaseClient.auth.resend({type:"signup",email});
-    }
-    if(result.error){
-      setAuthStatus("E-Mail konnte nicht gesendet werden: "+result.error.message);
+    const response=await fetch("https://wygkjvofgelfttdfjfcl.supabase.co/functions/v1/signup-email-code",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","apikey":"sb_publishable_3jRUceLgBkmqgw0azhSUoA_yZEick5a"},
+      body:JSON.stringify({action:isResend?"resend":"signup",email,...(isResend?{}:{password})})
+    });
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok){
+      const message=result.error||"Die E-Mail konnte nicht gesendet werden.";
+      setAuthStatus(message);showAuthToast(message);
       return;
     }
-    const now=Date.now(),nextCount=gate.count+1;
-    limits[email]={count:nextCount,lastSent:now,lockUntil:nextCount>=2?now+OTP_LOCKOUT:0};
-    writeOtpLimits(limits);
+    const attempt=Number(result.attempt||1);
     showOtpPanel(email);
-    const message=nextCount===1
+    const message=attempt===1
       ?"Wir haben dir eine E-Mail mit deinem Code geschickt."
       :"Wir haben dir erneut eine E-Mail mit einem neuen Code geschickt. Danach ist eine Stunde Pause.";
     setAuthStatus(message);showAuthToast(message);
-    document.getElementById("otpHint").textContent=nextCount===1
+    document.getElementById("otpHint").textContent=attempt===1
       ?"Der Code ist 5 Minuten gültig. Eine zweite E-Mail kannst du nach 5 Minuten anfordern."
       :"Der neue Code ist 5 Minuten gültig. Eine weitere E-Mail ist erst in einer Stunde möglich.";
-    document.getElementById("resendOtpButton").disabled=false;
-    document.getElementById("resendOtpButton").textContent="Code erneut senden";
   }catch(e){
     setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen."));
   }finally{
     document.getElementById("signUpButton").disabled=false;
+    document.getElementById("resendOtpButton").disabled=false;
   }
 }
 async function verifySignupCode(){
