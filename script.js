@@ -57,6 +57,8 @@ function updateAuthUI(){
   document.getElementById("signUpButton").hidden=signedIn;
   document.getElementById("authEmail").disabled=signedIn;
   document.getElementById("authPassword").disabled=signedIn;
+  document.getElementById("signUpButton").disabled=signedIn;
+  if(signedIn)hideOtpPanel();
   if(signedIn)setAuthStatus("Angemeldet als "+currentUser.email+". Deine Daten werden online gespeichert.");
 }
 async function loadCloudData(){
@@ -120,28 +122,129 @@ async function initSupabase(){
     setAuthStatus("Supabase konnte nicht gestartet werden: "+(e.message||"Bitte Projekt-URL und Publishable Key prüfen."));
   }
 }
+const OTP_LIMIT_KEY="schulplaner-email-otp-limits-v1";
+const OTP_FIRST_WAIT=5*60*1000;
+const OTP_LOCKOUT=60*60*1000;
+let pendingOtpEmail="";
+function readOtpLimits(){
+  try{return JSON.parse(localStorage.getItem(OTP_LIMIT_KEY)||"{}")}catch{return {}}
+}
+function writeOtpLimits(value){localStorage.setItem(OTP_LIMIT_KEY,JSON.stringify(value))}
+function emailLimitKey(email){return String(email||"").trim().toLowerCase()}
+function showAuthToast(message){
+  const toast=document.getElementById("authToast");
+  if(!toast)return;
+  toast.textContent=message;toast.classList.add("show");
+  clearTimeout(showAuthToast.timer);
+  showAuthToast.timer=setTimeout(()=>toast.classList.remove("show"),4200);
+}
+function showOtpPanel(email){
+  pendingOtpEmail=email;
+  document.getElementById("otpPanel").hidden=false;
+  document.getElementById("authEmail").readOnly=true;
+  document.getElementById("authPassword").readOnly=true;
+  document.getElementById("otpCode").focus();
+  document.getElementById("otpHint").textContent="Der Code ist 5 Minuten gültig. Prüfe auch deinen Spam-Ordner.";
+}
+function hideOtpPanel(){
+  document.getElementById("otpPanel").hidden=true;
+  document.getElementById("authEmail").readOnly=false;
+  document.getElementById("authPassword").readOnly=false;
+  pendingOtpEmail="";
+}
+function formatWait(ms){
+  const minutes=Math.max(1,Math.ceil(ms/60000));
+  return minutes+" Minute"+(minutes===1?"":"n");
+}
+function otpRemaining(email){
+  const limits=readOtpLimits(),entry=limits[emailLimitKey(email)];
+  if(!entry)return {allowed:true,count:0};
+  const now=Date.now();
+  if(entry.count>=2&&entry.lockUntil>now)return {allowed:false,count:2,wait:entry.lockUntil-now,locked:true};
+  if(entry.count===1&&entry.lastSent+OTP_FIRST_WAIT>now)return {allowed:false,count:1,wait:entry.lastSent+OTP_FIRST_WAIT-now,locked:false};
+  if(entry.count>=2&&entry.lockUntil<=now)return {allowed:true,count:0};
+  return {allowed:true,count:entry.count||0};
+}
+async function requestSignupCode(isResend=false){
+  if(!supabaseClient){setAuthStatus("Supabase ist noch nicht bereit. Bitte lade die Seite neu.");return;}
+  const email=emailLimitKey(document.getElementById("authEmail").value);
+  const password=document.getElementById("authPassword").value;
+  if(!email||!/^\S+@\S+\.\S+$/.test(email)||password.length<8){setAuthStatus("Bitte gib eine gültige E-Mail-Adresse und ein Passwort mit mindestens 8 Zeichen ein.");return;}
+  const limits=readOtpLimits(),entry=limits[email]||{count:0,lastSent:0,lockUntil:0};
+  const gate=otpRemaining(email);
+  if(!gate.allowed){
+    const message=gate.locked
+      ?"Du hast bereits zwei E-Mails angefordert. Bitte warte noch "+formatWait(gate.wait)+", bevor du es erneut versuchst."
+      :"Du hast bereits einen Code angefordert. Eine zweite E-Mail kannst du in "+formatWait(gate.wait)+" anfordern.";
+    setAuthStatus(message);showAuthToast(message);return;
+  }
+  if(isResend&&gate.count===0){setAuthStatus("Bitte fordere zuerst einen Code über „Konto erstellen“ an.");return;}
+  setAuthStatus(isResend?"Wir senden dir einen neuen Code …":"Wir erstellen dein Konto …");
+  document.getElementById("signUpButton").disabled=true;
+  try{
+    let result;
+    if(!isResend){
+      result=await supabaseClient.auth.signUp({email,password});
+    }else{
+      result=await supabaseClient.auth.resend({type:"signup",email});
+    }
+    if(result.error){
+      setAuthStatus("E-Mail konnte nicht gesendet werden: "+result.error.message);
+      return;
+    }
+    const now=Date.now(),nextCount=gate.count+1;
+    limits[email]={count:nextCount,lastSent:now,lockUntil:nextCount>=2?now+OTP_LOCKOUT:0};
+    writeOtpLimits(limits);
+    showOtpPanel(email);
+    const message=nextCount===1
+      ?"Wir haben dir eine E-Mail mit deinem Code geschickt."
+      :"Wir haben dir erneut eine E-Mail mit einem neuen Code geschickt. Danach ist eine Stunde Pause.";
+    setAuthStatus(message);showAuthToast(message);
+    document.getElementById("otpHint").textContent=nextCount===1
+      ?"Der Code ist 5 Minuten gültig. Eine zweite E-Mail kannst du nach 5 Minuten anfordern."
+      :"Der neue Code ist 5 Minuten gültig. Eine weitere E-Mail ist erst in einer Stunde möglich.";
+    document.getElementById("resendOtpButton").disabled=nextCount>=2;
+    document.getElementById("resendOtpButton").textContent=nextCount>=2?"Keine weiteren E-Mails möglich":"Code erneut senden";
+  }catch(e){
+    setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen."));
+  }finally{
+    document.getElementById("signUpButton").disabled=false;
+  }
+}
+async function verifySignupCode(){
+  const email=pendingOtpEmail||emailLimitKey(document.getElementById("authEmail").value);
+  const token=document.getElementById("otpCode").value.trim();
+  if(!/^\d{6}$/.test(token)){setAuthStatus("Bitte gib den sechsstelligen Code ein.");return;}
+  setAuthStatus("Code wird geprüft …");
+  document.getElementById("verifyOtpButton").disabled=true;
+  try{
+    const {data:result,error}=await supabaseClient.auth.verifyOtp({email,token,type:"signup"});
+    if(error){setAuthStatus("Der Code ist ungültig oder abgelaufen: "+error.message);return;}
+    if(result.user){
+      currentUser=result.user;
+      hideOtpPanel();
+      updateAuthUI();
+      showAuthToast("E-Mail bestätigt – du bist jetzt angemeldet!");
+      try{await loadCloudData();go("profile");}
+      catch(e){cloudReady=false;setAuthStatus("Angemeldet, aber Cloud-Speicherung fehlgeschlagen: "+e.message);}
+    }
+  }catch(e){setAuthStatus("Code konnte nicht geprüft werden: "+(e.message||"Bitte erneut versuchen."));}
+  finally{document.getElementById("verifyOtpButton").disabled=false;}
+}
 async function signInOrUp(mode){
+  if(mode==="signup"){await requestSignupCode(false);return;}
   if(!supabaseClient){setAuthStatus("Supabase ist noch nicht konfiguriert. Bitte prüfe den Publishable Key.");return;}
   const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value;
   if(!email||password.length<8){setAuthStatus("Bitte E-Mail und ein Passwort mit mindestens 8 Zeichen eingeben.");return;}
   setAuthStatus("Einen Moment …");
   try{
-    const result=mode==="signup"
-      ?await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}})
-      :await supabaseClient.auth.signInWithPassword({email,password});
+    const result=await supabaseClient.auth.signInWithPassword({email,password});
     if(result.error){setAuthStatus("Anmeldung fehlgeschlagen: "+result.error.message);return;}
-    if(mode==="signup"&&!result.data.session){
-      setAuthStatus("Konto angelegt. Bitte bestätige den Link in deiner E-Mail und melde dich danach hier an.");
-      return;
-    }
     if(result.data.user){
-      currentUser=result.data.user;
-      updateAuthUI();
+      currentUser=result.data.user;updateAuthUI();
       try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Konto angemeldet, aber Cloud-Speicherung fehlgeschlagen: "+e.message)}
     }
-  }catch(e){
-    setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen und erneut versuchen."));
-  }
+  }catch(e){setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen und erneut versuchen."));}
 }
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function val(id){return document.getElementById(id).value.trim()}
@@ -160,6 +263,9 @@ document.querySelectorAll("[data-goto]").forEach(b=>b.addEventListener("click",(
 document.getElementById("profileButton").onclick=()=>go("profile");
 document.getElementById("signInButton").onclick=()=>signInOrUp("signin");
 document.getElementById("signUpButton").onclick=()=>signInOrUp("signup");
+document.getElementById("verifyOtpButton").onclick=verifySignupCode;
+document.getElementById("resendOtpButton").onclick=()=>requestSignupCode(true);
+document.getElementById("otpCode").addEventListener("input",e=>{e.target.value=e.target.value.replace(/\\D/g,"").slice(0,6)});
 document.getElementById("signOutButton").onclick=async()=>{
   clearTimeout(cloudSaveTimer);
   cloudReady=false;
