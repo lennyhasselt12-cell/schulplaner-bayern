@@ -182,3 +182,30 @@ button,input,select{font:inherit}button{cursor:pointer}.app-shell{min-height:100
 .panel-divider{border:0;border-top:1px solid var(--border,rgba(148,163,184,.2));margin:22px 0}
 #authStatus{grid-column:1/-1;overflow-wrap:anywhere}
 #signOutButton{width:fit-content}
+
+
+/* Kleine Stundenplan-Optionen */
+.timetable-heading {
+  align-items: center;
+}
+.timetable-options-button {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+.timetable-options-button:hover {
+  background: var(--line);
+}
+.timetable-options-button:active {
+  transform: scale(.94);
+}

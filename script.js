@@ -63,34 +63,57 @@ async function loadCloudData(){
     render();
     setAuthStatus("Deine Online-Daten wurden geladen ✓");
   }else{
-    await supabaseClient.from("user_settings").upsert({user_id:currentUser.id,settings:{app_data:data},updated_at:new Date().toISOString()},{onConflict:"user_id"});
+    const {error:insertError}=await supabaseClient.from("user_settings").upsert(
+      {user_id:currentUser.id,settings:{app_data:data},updated_at:new Date().toISOString()},
+      {onConflict:"user_id"}
+    );
+    if(insertError) throw insertError;
     setAuthStatus("Konto verbunden. Deine bisherigen Gerätedaten wurden erstmals online gespeichert ✓");
   }
   cloudReady=true;
 }
 async function initSupabase(){
   if(!window.supabase?.createClient){setAuthStatus("Supabase-Bibliothek konnte nicht geladen werden. Prüfe deine Internetverbindung.");return;}
-  if(SUPABASE_PUBLISHABLE_KEY.startsWith("HIER_DEIN_")){setAuthStatus("Supabase-Schlüssel fehlt noch. Wir tragen ihn als Nächstes ein.");return;}
-  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
-  const {data:sessionData}=await supabaseClient.auth.getSession();
-  currentUser=sessionData.session?.user||null;
-  updateAuthUI();
-  if(currentUser){try{await loadCloudData()}catch(e){setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
-  supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
-    currentUser=session?.user||null;cloudReady=false;updateAuthUI();
-    if(currentUser){try{await loadCloudData()}catch(e){setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
-    else setAuthStatus("Abgemeldet. Daten auf diesem Gerät bleiben erhalten.");
-  });
+  if(SUPABASE_PUBLISHABLE_KEY.startsWith("HIER_DEIN_")){setAuthStatus("Supabase-Schlüssel fehlt noch.");return;}
+  try{
+    supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+    const {data:sessionData,error}=await supabaseClient.auth.getSession();
+    if(error) throw error;
+    currentUser=sessionData.session?.user||null;
+    updateAuthUI();
+    if(currentUser){try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
+    supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
+      currentUser=session?.user||null;cloudReady=false;updateAuthUI();
+      if(currentUser){try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
+      else setAuthStatus("Abgemeldet. Daten auf diesem Gerät bleiben erhalten.");
+    });
+  }catch(e){
+    supabaseClient=null;
+    setAuthStatus("Supabase konnte nicht gestartet werden: "+(e.message||"Bitte Projekt-URL und Publishable Key prüfen."));
+  }
 }
 async function signInOrUp(mode){
-  if(!supabaseClient){setAuthStatus("Supabase ist noch nicht konfiguriert. Der Publishable Key fehlt.");return;}
+  if(!supabaseClient){setAuthStatus("Supabase ist noch nicht konfiguriert. Bitte prüfe den Publishable Key.");return;}
   const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value;
   if(!email||password.length<8){setAuthStatus("Bitte E-Mail und ein Passwort mit mindestens 8 Zeichen eingeben.");return;}
   setAuthStatus("Einen Moment …");
-  const result=mode==="signup"?await supabaseClient.auth.signUp({email,password}):await supabaseClient.auth.signInWithPassword({email,password});
-  if(result.error){setAuthStatus(result.error.message);return;}
-  if(mode==="signup"&&!result.data.session){setAuthStatus("Konto erstellt. Bitte bestätige zuerst den Link in deiner E-Mail und melde dich danach an.");return;}
-  if(result.data.user){currentUser=result.data.user;updateAuthUI();try{await loadCloudData()}catch(e){setAuthStatus("Verbindung fehlgeschlagen: "+e.message)}}
+  try{
+    const result=mode==="signup"
+      ?await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}})
+      :await supabaseClient.auth.signInWithPassword({email,password});
+    if(result.error){setAuthStatus("Anmeldung fehlgeschlagen: "+result.error.message);return;}
+    if(mode==="signup"&&!result.data.session){
+      setAuthStatus("Konto angelegt. Bitte bestätige den Link in deiner E-Mail und melde dich danach hier an.");
+      return;
+    }
+    if(result.data.user){
+      currentUser=result.data.user;
+      updateAuthUI();
+      try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Konto angemeldet, aber Cloud-Speicherung fehlgeschlagen: "+e.message)}
+    }
+  }catch(e){
+    setAuthStatus("Verbindungsfehler: "+(e.message||"Bitte Internetverbindung prüfen und erneut versuchen."));
+  }
 }
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function val(id){return document.getElementById(id).value.trim()}
@@ -151,6 +174,17 @@ document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",(
     ?"Wähle oben ein Fach und tippe auf die Stunden, in denen du es hast. Tippe erneut, um es zu ändern."
     :"Wähle eine Lehrkraft und tippe auf die Stunden, denen du sie zuordnen möchtest.";
 }));
+document.getElementById("clearTimetableButton").addEventListener("click",()=>{
+  if(!data.lessons.length){
+    alert("Dein Stundenplan ist bereits leer.");
+    return;
+  }
+  if(confirm("Möchtest du wirklich alle eingetragenen Stunden löschen? Deine Fächer und Lehrkräfte bleiben erhalten.")){
+    data.lessons=[];
+    save();
+  }
+});
+
 document.getElementById("activeSubject").addEventListener("change",()=>{});
 document.getElementById("activeTeacher").addEventListener("change",()=>{});
 

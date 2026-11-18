@@ -41,7 +41,7 @@
           <article class="panel"><div class="panel-heading"><div><p class="eyebrow">DEIN TAG</p><h2>Heute im Stundenplan</h2></div><button class="text-button" data-goto="timetable">Bearbeiten →</button></div><div id="todaySchedule" class="empty-state">Noch keine Stunden eingetragen. Füge deinen Stundenplan hinzu.</div></article>
           <article class="panel"><div class="panel-heading"><div><p class="eyebrow">IM BLICK</p><h2>Demnächst</h2></div><button class="text-button" data-goto="exams">Alle Termine →</button></div><div id="upcomingList" class="empty-state">Noch keine Proben oder Termine eingetragen.</div></article>
         </div>
-        <div class="notice"><span>🔒</span><div><strong>Deine Daten bleiben vorerst auf diesem Gerät.</strong><p>Das ist eine erste Vorschau. Gemeinsame Online-Profile für Freunde richten wir im nächsten Schritt mit einer Datenbank ein.</p></div></div>
+        <div class="notice"><span>🔒</span><div><strong>Deine Daten gehören zu deinem Konto.</strong><p>Wenn du angemeldet bist, werden deine Änderungen mit deinem persönlichen Online-Profil synchronisiert.</p></div></div>
       </section>
 
       <section class="page" id="page-grades">
@@ -66,7 +66,7 @@
           <div id="subjectChips" class="subject-chips"></div>
         </article>
         <article class="panel timetable-editor">
-          <div class="panel-heading"><div><p class="eyebrow">SCHRITT 2 · STUNDENPLAN</p><h2>Fach auswählen und Stunden antippen</h2></div></div>
+          <div class="panel-heading timetable-heading"><div><p class="eyebrow">SCHRITT 2 · STUNDENPLAN</p><h2>Fach auswählen und Stunden antippen</h2></div><button type="button" class="timetable-options-button" id="clearTimetableButton" aria-label="Stundenplan löschen" title="Stundenplan löschen">⋯</button></div>
           <div class="timetable-toolbar">
             <label>Aktives Fach<select id="activeSubject"></select></label>
             <div class="mode-switch" role="group" aria-label="Bearbeitungsmodus"><button type="button" class="mode-button active" data-mode="subject">Fächer eintragen</button><button type="button" class="mode-button" data-mode="teacher">Lehrer zuordnen</button></div>
