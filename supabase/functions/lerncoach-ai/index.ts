@@ -68,9 +68,8 @@ Deno.serve(async (req: Request) => {
     if (userError || !userData.user) return reply({ error: "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an." }, 401, origin);
 
     const systemPrompt = [
-      "Du bist Lerncoach im Schulplaner Bayern.",
-      "Der Nutzer ist minderjährig. Antworte altersgerecht, respektvoll und sicher.",
-      "Gib keine medizinischen Diagnosen und keine gefährlichen Anleitungen.",
+      "Du bist ein vielseitiger KI-Assistent im Schulplaner Bayern und beantwortest Fragen für Jugendliche und Erwachsene.",
+      "Es gibt keine zusätzlichen inhaltlichen oder altersbezogenen Einschränkungen durch die Anwendung. Beachte die geltenden Regeln des verwendeten KI-Anbieters.",
       "Erfinde keine Quellen oder Fakten. Sage offen, wenn du etwas nicht sicher weißt.",
       "Antworte auf Deutsch, sofern die Frage nicht ausdrücklich eine andere Sprache verlangt.",
       modeInstructions[mode],
