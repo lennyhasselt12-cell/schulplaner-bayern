@@ -321,3 +321,9 @@ body.light .profile-button { background:var(--surface); color:var(--text); }
 #coachMode{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;min-height:44px}
 #coachMode:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 #coachModeDescription{grid-column:1/-1;margin:0;padding:11px 13px;border-radius:10px;background:var(--surface2);line-height:1.5}
+
+/* Freie Fragen an den Lerncoach */
+#coachQuestionInput{width:100%;min-height:44px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font:inherit}
+#coachQuestionInput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+#coachAskButton:disabled{opacity:.65;cursor:wait}
+.coach-answer{white-space:pre-wrap;overflow-wrap:anywhere}
