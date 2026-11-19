@@ -227,7 +227,7 @@ async function requestSignupCode(isResend=false){
 async function verifySignupCode(){
   const email=pendingOtpEmail||emailLimitKey(document.getElementById("authEmail").value);
   const token=document.getElementById("otpCode").value.trim();
-  if(!/^\d{6}$/.test(token)){setAuthStatus("Bitte gib den sechsstelligen Code ein.");return;}
+  if(!/^\d{8}$/.test(token)){setAuthStatus("Bitte gib den achtstelligen Code ein.");return;}
   setAuthStatus("Code wird geprüft …");
   document.getElementById("verifyOtpButton").disabled=true;
   try{
@@ -278,7 +278,7 @@ document.getElementById("signInButton").onclick=()=>signInOrUp("signin");
 document.getElementById("signUpButton").onclick=()=>signInOrUp("signup");
 document.getElementById("verifyOtpButton").onclick=verifySignupCode;
 document.getElementById("resendOtpButton").onclick=()=>requestSignupCode(true);
-document.getElementById("otpCode").addEventListener("input",e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,6)});
+document.getElementById("otpCode").addEventListener("input",e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,8)});
 document.getElementById("signOutButton").onclick=async()=>{
   clearTimeout(cloudSaveTimer);
   cloudReady=false;
