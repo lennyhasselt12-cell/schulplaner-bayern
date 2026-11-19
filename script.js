@@ -652,6 +652,16 @@ function teacherAnswer(day){
 // Lerncoach: arbeitet mit gespeicherten eigenen Notizen und einer kleinen Wissensbasis.
 let coachQuestions=[];
 let coachQuestionIndex=0;
+const COACH_MODE_KEY="schulplaner-coach-mode";
+const coachModeDescriptions={standard:"Ich beantworte allgemeine und schulische Fragen vielseitig.",school:"Ich erkläre Schulstoff passend zu deiner Klassenstufe und orientiere mich an deinen Notizen.",general:"Ich konzentriere mich auf Allgemeinwissen wie Technik, Computer, Wissenschaft, Geschichte, Natur und Alltag.",personal:"Deine eigenen Notizen und gespeicherten Lernzettel haben Vorrang.",learning:"Ich helfe dir aktiv mit Erklärungen, Beispielen, Übungen und Quizfragen.",chat:"Wir können frei über Themen sprechen, Ideen sammeln und ganz normal chatten."};
+function coachSetMode(mode){
+  const select=document.getElementById("coachMode");
+  const valid=Object.prototype.hasOwnProperty.call(coachModeDescriptions,mode)?mode:"standard";
+  select.value=valid;
+  localStorage.setItem(COACH_MODE_KEY,valid);
+  document.getElementById("coachModeDescription").textContent=coachModeDescriptions[valid];
+}
+
 let coachLevel=1;
 let coachCorrect=0;
 let coachAnswered=false;
@@ -785,6 +795,8 @@ function coachNext(){
   document.getElementById("coachNextButton").disabled=true;
   document.getElementById("coachScore").textContent="Ergebnis: "+coachCorrect+"/"+coachQuestions.length+" richtig.";
 }
+coachSetMode(localStorage.getItem(COACH_MODE_KEY)||"standard");
+document.getElementById("coachMode").addEventListener("change",event=>coachSetMode(event.target.value));
 document.getElementById("coachSaveButton").addEventListener("click",coachSaveNotes);
 document.getElementById("coachTopic").addEventListener("change",coachLoadNotes);
 document.getElementById("coachExplainButton").addEventListener("click",coachExplain);
