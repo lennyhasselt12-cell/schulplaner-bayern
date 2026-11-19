@@ -100,9 +100,11 @@
         <article class="panel coach-setup">
           <h2>Dein Lernthema</h2>
           <div class="form-grid">
+            <label>Modus<select id="coachMode"><option value="standard">Standard – von allem etwas</option><option value="school">Schulmodus – passend zur Klassenstufe</option><option value="general">Allgemeinwissen – Technik, Wissenschaft, Alltag &amp; mehr</option><option value="personal">Persönliches Wissen – deine Notizen im Mittelpunkt</option><option value="learning">Lernmodus – Erklärungen, Übungen &amp; Quiz</option><option value="chat">Unterhaltung – frei sprechen und Ideen austauschen</option></select></label>
             <label>Fach oder Thema<input id="coachTopic" maxlength="80" placeholder="z. B. Mathe – Prozentrechnung"></label>
             <label class="wide">Deine Hefteinträge / Lernzettel<textarea id="coachNotes" rows="6" placeholder="Füge hier deine Notizen ein. Der Lerncoach nutzt sie als Grundlage für Erklärungen und Fragen. Du kannst auch ohne Notizen starten."></textarea></label>
             <div class="coach-actions"><button type="button" class="primary-button" id="coachExplainButton">Thema erklären</button><button type="button" class="secondary-button" id="coachStartButton">Adaptive Abfrage starten</button><button type="button" class="text-button" id="coachSaveButton">Notizen speichern</button></div>
+            <p class="muted small-note" id="coachModeDescription" aria-live="polite">Ich beantworte allgemeine und schulische Fragen vielseitig.</p>
             <p class="muted small-note" id="coachStatus">Deine Notizen werden in deinem Schulplaner gespeichert und bei aktiver Anmeldung mit deinem Konto synchronisiert.</p>
           </div>
         </article>
