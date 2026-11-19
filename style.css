@@ -316,3 +316,8 @@ body.light .profile-button { background:var(--surface); color:var(--text); }
 .auth-toast.show{opacity:1;transform:translate(-50%,0)}
 @keyframes otpIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:520px){.otp-panel{padding:18px 14px}.auth-toast{top:10px;text-align:center}}
+
+/* Lerncoach-Modusauswahl */
+#coachMode{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;min-height:44px}
+#coachMode:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+#coachModeDescription{grid-column:1/-1;margin:0;padding:11px 13px;border-radius:10px;background:var(--surface2);line-height:1.5}
