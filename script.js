@@ -725,6 +725,47 @@ function coachExplain(){
   out.innerHTML=text;
   panel.hidden=false;
 }
+async function coachAskAI(){
+  const question=document.getElementById("coachQuestionInput").value.trim();
+  const panel=document.getElementById("coachExplanationPanel");
+  const out=document.getElementById("coachExplanation");
+  const status=document.getElementById("coachStatus");
+  if(!question){status.textContent="Schreib zuerst eine Frage in das Feld.";return}
+  if(!currentUser||!supabaseClient){status.textContent="Für die echte KI musst du angemeldet sein. Deine bisherigen Offline-Lernfunktionen bleiben verfügbar.";return}
+  const button=document.getElementById("coachAskButton");
+  button.disabled=true;
+  button.textContent="Lerncoach denkt nach …";
+  status.textContent="Deine Frage wird sicher an den Lerncoach übermittelt.";
+  panel.hidden=false;
+  out.textContent="Einen Moment – ich bereite die Antwort vor …";
+  try{
+    const mode=document.getElementById("coachMode").value||"standard";
+    const {data:result,error}=await supabaseClient.functions.invoke("lerncoach-ai",{
+      body:{
+        question,
+        mode,
+        topic:document.getElementById("coachTopic").value.trim(),
+        notes:document.getElementById("coachNotes").value.trim(),
+        classLevel:data.profile?.className||""
+      }
+    });
+    if(error) throw error;
+    if(result?.error) throw new Error(result.error);
+    if(!result?.answer) throw new Error("Der Lerncoach hat keine Antwort erhalten.");
+    out.textContent=result.answer;
+    status.textContent="Antwort vom Lerncoach erhalten ✓";
+  }catch(error){
+    console.warn("Lerncoach KI:",error);
+    const message=error?.message||"Unbekannter Fehler";
+    out.textContent=message.includes("noch nicht eingerichtet")
+      ?"Die sichere KI-Schnittstelle ist vorbereitet. Es fehlt noch die Freigabe und Konfiguration eines passenden KI-Anbieters. Deine vorhandenen Lerncoach-Funktionen funktionieren weiterhin."
+      :"Die KI-Antwort konnte gerade nicht geladen werden. "+message;
+    status.textContent="Die KI-Verbindung ist noch nicht vollständig eingerichtet.";
+  }finally{
+    button.disabled=false;
+    button.textContent="Frage an Lerncoach senden";
+  }
+}
 function coachBuildQuestions(){
   const topic=document.getElementById("coachTopic").value.trim()||"dein Thema";
   const notes=document.getElementById("coachNotes").value.trim();
@@ -800,6 +841,8 @@ document.getElementById("coachMode").addEventListener("change",event=>coachSetMo
 document.getElementById("coachSaveButton").addEventListener("click",coachSaveNotes);
 document.getElementById("coachTopic").addEventListener("change",coachLoadNotes);
 document.getElementById("coachExplainButton").addEventListener("click",coachExplain);
+document.getElementById("coachAskButton").addEventListener("click",coachAskAI);
+document.getElementById("coachQuestionInput").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();coachAskAI()}});
 document.getElementById("coachStartButton").addEventListener("click",coachStart);
 document.getElementById("coachNextButton").addEventListener("click",coachNext);
 document.getElementById("coachStopButton").addEventListener("click",()=>{document.getElementById("coachQuizPanel").hidden=true});
