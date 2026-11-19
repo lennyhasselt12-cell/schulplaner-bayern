@@ -2,9 +2,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const PROJECT_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const AI_API_URL = Deno.env.get("AI_API_URL") ?? "";
-const AI_API_KEY = Deno.env.get("AI_API_KEY") ?? "";
-const AI_MODEL = Deno.env.get("AI_MODEL") ?? "";
+const CLOUDFLARE_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") ?? "";
+const AI_API_URL = Deno.env.get("AI_API_URL")
+  ?? (CLOUDFLARE_ACCOUNT_ID
+    ? `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1/chat/completions`
+    : "");
+const AI_API_KEY = Deno.env.get("CLOUDFLARE_API_TOKEN") ?? Deno.env.get("AI_API_KEY") ?? "";
+const AI_MODEL = Deno.env.get("AI_MODEL") ?? "@cf/google/gemma-4-26b-a4b-it";
 const ALLOWED_ORIGINS = new Set(["https://lennyhasselt12-cell.github.io"]);
 
 const corsHeaders = (origin: string) => ({
