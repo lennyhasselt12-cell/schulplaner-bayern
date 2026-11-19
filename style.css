@@ -307,7 +307,7 @@ body.light .profile-button { background:var(--surface); color:var(--text); }
 .otp-panel h3{margin:5px 0 8px;font-size:19px}
 .otp-panel>p{max-width:420px;margin:0 auto 18px;color:var(--muted);font-size:13px;line-height:1.55}
 .otp-panel label{display:block;margin-bottom:8px;text-align:left;font-size:12px;font-weight:700}
-.otp-code-input{display:block;width:100%;max-width:300px;margin:0 auto 14px;padding:13px 10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font:700 26px/1.2 'DM Sans',sans-serif;letter-spacing:.45em;text-align:center}
+.otp-code-input{display:block;width:100%;max-width:340px;margin:0 auto 14px;padding:13px 10px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);font:700 24px/1.2 'DM Sans',sans-serif;letter-spacing:.25em;text-align:center}
 .otp-code-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 .otp-panel>.primary-button{width:100%;max-width:300px;min-height:45px}
 .otp-resend{display:block;margin:10px auto 0}
