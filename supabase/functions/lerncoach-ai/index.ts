@@ -105,7 +105,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!aiResponse.ok) {
-      console.error("AI provider returned status:", aiResponse.status);
+      const providerError = (await aiResponse.text()).slice(0, 1200);
+      console.error("AI provider returned status:", aiResponse.status, "response:", providerError);
       return reply({ error: "Der KI-Dienst antwortet gerade nicht. Bitte versuche es später erneut." }, 502, origin);
     }
     const result = await aiResponse.json();
