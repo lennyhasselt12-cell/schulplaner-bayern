@@ -136,9 +136,9 @@
             <div class="otp-panel" id="otpPanel" hidden>
               <div class="otp-icon">✉</div>
               <h3>Prüfe dein Postfach</h3>
-              <p>Wir haben dir einen sechsstelligen Bestätigungscode geschickt. Gib ihn hier ein, um dein Konto freizuschalten.</p>
+              <p>Wir haben dir einen achtstelligen Bestätigungscode geschickt. Gib ihn hier ein, um dein Konto freizuschalten.</p>
               <label for="otpCode">Dein E-Mail-Code</label>
-              <input id="otpCode" class="otp-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="••••••" aria-label="Sechsstelliger E-Mail-Code">
+              <input id="otpCode" class="otp-code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{8}" placeholder="••••••••" aria-label="Achtstelliger E-Mail-Code">
               <button class="primary-button" type="button" id="verifyOtpButton">Code bestätigen</button>
               <button class="text-button otp-resend" type="button" id="resendOtpButton">Code erneut senden</button>
               <p class="otp-hint" id="otpHint" aria-live="polite">Der Code ist 5 Minuten gültig.</p>
