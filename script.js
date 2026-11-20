@@ -16,6 +16,8 @@ let timetableMode = "subject";
 let longPressTimer = null;
 let longPressTriggered = false;
 let subjectLongPressTimer = null;
+let teacherLongPressTimer = null;
+let teacherLongPressTriggered = false;
 
 function emptyData(){
   return {profile:{},grades:[],lessons:[],materials:[],exams:[],theme:"dark",subjects:[],teachers:[],studyNotes:{}};
@@ -409,6 +411,24 @@ function renderTimetable(){
   const teacherSelect=document.getElementById("activeTeacher"),currentTeacher=teacherSelect.value;
   teacherSelect.innerHTML=data.teachers.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join("")||'<option value="">Erst eine Lehrkraft anlegen</option>';
   if(data.teachers.includes(currentTeacher))teacherSelect.value=currentTeacher;
+  else if(data.teachers.length)teacherSelect.value=data.teachers[0];
+  const teacherChips=document.getElementById("teacherChips");
+  teacherChips.innerHTML=data.teachers.length?data.teachers.map(t=>`<button type="button" class="teacher-chip ${t===teacherSelect.value?"active":""}" data-teacher-name="${esc(t)}" title="Antippen zum Auswählen, gedrückt halten zum Löschen">${esc(t)}</button>`).join(""):'<p class="muted small-note">Füge zuerst eine Lehrkraft hinzu.</p>';
+  teacherChips.querySelectorAll("[data-teacher-name]").forEach(chip=>{
+    const name=chip.dataset.teacherName;
+    chip.addEventListener("click",()=>{
+      if(teacherLongPressTriggered){teacherLongPressTriggered=false;return}
+      teacherSelect.value=name;
+      teacherChips.querySelectorAll(".teacher-chip").forEach(item=>item.classList.toggle("active",item===chip));
+    });
+    chip.addEventListener("pointerdown",()=>{
+      teacherLongPressTriggered=false;
+      clearTimeout(teacherLongPressTimer);
+      teacherLongPressTimer=setTimeout(()=>{teacherLongPressTriggered=true;deleteTeacher(name)},650);
+    });
+    ["pointerup","pointerleave","pointercancel"].forEach(ev=>chip.addEventListener(ev,()=>clearTimeout(teacherLongPressTimer)));
+    chip.addEventListener("contextmenu",e=>{e.preventDefault();teacherLongPressTriggered=true;deleteTeacher(name)});
+  });
   document.getElementById("subjectChips").innerHTML=data.subjects.length?data.subjects.map(s=>`<div class="subject-chip" data-subject-id="${s.id}" title="Gedrückt halten, um das Fach zu löschen"><span class="subject-swatch" style="background:${esc(s.color)}"></span><span><strong>${esc(s.name)}</strong><small>${esc(s.short||"")}</small></span><button type="button" data-edit-subject="${s.id}" aria-label="Fach bearbeiten">✎</button></div>`).join(""):'<p class="muted small-note">Lege zuerst deine Fächer an. Name, Kürzel und Farbe kannst du selbst bestimmen.</p>';
   document.querySelectorAll("[data-edit-subject]").forEach(b=>b.onclick=()=>editSubject(b.dataset.editSubject));
   document.querySelectorAll("[data-subject-id]").forEach(chip=>{
@@ -467,6 +487,18 @@ function deleteSubject(id){
   if(!confirm(message))return;
   data.subjects=data.subjects.filter(s=>String(s.id)!==String(id));
   data.lessons=data.lessons.filter(l=>l.subject!==subject.name);
+  save();
+}
+
+function deleteTeacher(name){
+  if(!data.teachers.includes(name))return;
+  const used=data.lessons.filter(l=>l.teacher===name).length;
+  const message=used
+    ? `Möchtest du die Lehrkraft „${name}“ wirklich löschen? Die Zuordnung in ${used} ${used===1?"Stunde":"Stunden"} wird dabei entfernt.`
+    : `Möchtest du die Lehrkraft „${name}“ wirklich löschen?`;
+  if(!confirm(message))return;
+  data.teachers=data.teachers.filter(t=>t!==name);
+  data.lessons.forEach(l=>{if(l.teacher===name)l.teacher=""});
   save();
 }
 
