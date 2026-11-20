@@ -1,0 +1,27 @@
+{
+  "name": "Schulplaner Bayern",
+  "short_name": "Schulplaner",
+  "description": "Dein Schulalltag. Im Griff.",
+  "lang": "de-DE",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
+  "background_color": "#0b1224",
+  "theme_color": "#101b35",
+  "orientation": "any",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
