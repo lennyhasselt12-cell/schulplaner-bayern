@@ -653,7 +653,7 @@ function teacherAnswer(day){
 let coachQuestions=[];
 let coachQuestionIndex=0;
 const COACH_MODE_KEY="schulplaner-coach-mode";
-const coachModeDescriptions={standard:"Ich beantworte allgemeine und schulische Fragen vielseitig.",school:"Ich erkläre Schulstoff passend zu deiner Klassenstufe und orientiere mich an deinen Notizen.",general:"Ich konzentriere mich auf Allgemeinwissen wie Technik, Computer, Wissenschaft, Geschichte, Natur und Alltag.",personal:"Deine eigenen Notizen und gespeicherten Lernzettel haben Vorrang.",learning:"Ich helfe dir aktiv mit Erklärungen, Beispielen, Übungen und Quizfragen.",chat:"Wir können frei über Themen sprechen, Ideen sammeln und ganz normal chatten."};
+const coachModeDescriptions={standard:"Ich beantworte allgemeine und schulische Fragen vielseitig.",school:"Ich erkläre Schulstoff passend zu deiner Klassenstufe und orientiere mich an deinen Notizen.",general:"Ich konzentriere mich auf Allgemeinwissen wie Technik, Computer, Wissenschaft, Geschichte, Natur und Alltag.",personal:"Nutze alle übermittelten gespeicherten Lernzettel und Notizen. Suche darin gezielt nach passenden Informationen, nenne bei Bedarf das Thema der jeweiligen Notiz und erfinde keine Inhalte, die dort nicht stehen.",learning:"Ich helfe dir aktiv mit Erklärungen, Beispielen, Übungen und Quizfragen.",chat:"Wir können frei über Themen sprechen, Ideen sammeln und ganz normal chatten."};
 function coachSetMode(mode){
   const select=document.getElementById("coachMode");
   const valid=Object.prototype.hasOwnProperty.call(coachModeDescriptions,mode)?mode:"standard";
@@ -703,6 +703,37 @@ function coachLoadNotes(){
   const match=Object.values(saved).find(x=>normalized(x.topic||"")===normalized(topic));
   if(match)document.getElementById("coachNotes").value=match.notes||"";
 }
+function coachBuildPersonalContext(){
+  const saved=data.studyNotes&&typeof data.studyNotes==="object"?data.studyNotes:{};
+  const currentTopic=document.getElementById("coachTopic").value.trim();
+  const currentNotes=document.getElementById("coachNotes").value.trim();
+  const entries=Object.entries(saved).map(([key,value])=>({
+    key,
+    topic:String(value?.topic||key||"Allgemeine Notizen").trim(),
+    notes:String(value?.notes||"").trim(),
+    updatedAt:String(value?.updatedAt||"")
+  })).filter(entry=>entry.notes);
+  // Aktuelle Eingaben haben Vorrang vor einer älteren gespeicherten Version desselben Themas.
+  if(currentNotes){
+    const currentKey=currentTopic||"Aktuelle Notizen";
+    const normalizedTopic=normalized(currentTopic);
+    const existing=entries.findIndex(entry=>normalized(entry.topic)===normalizedTopic&&normalizedTopic);
+    const currentEntry={key:currentKey,topic:currentTopic||"Aktuelle Notizen",notes:currentNotes,updatedAt:"9999"};
+    if(existing>=0)entries.splice(existing,1);
+    entries.unshift(currentEntry);
+  }
+  entries.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  const sections=[];
+  let remaining=8000;
+  for(const entry of entries){
+    if(remaining<=0)break;
+    const section="Thema: "+entry.topic+"\\nNotizen:\\n"+entry.notes;
+    const clipped=section.length>remaining?section.slice(0,remaining):section;
+    sections.push(clipped);
+    remaining-=clipped.length+2;
+  }
+  return sections.join("\\n\\n");
+}
 function coachExplain(){
   const topic=document.getElementById("coachTopic").value.trim()||"dein Thema";
   const notes=document.getElementById("coachNotes").value.trim();
@@ -745,7 +776,7 @@ async function coachAskAI(){
         question,
         mode,
         topic:document.getElementById("coachTopic").value.trim(),
-        notes:document.getElementById("coachNotes").value.trim(),
+        notes:mode==="personal"?coachBuildPersonalContext():document.getElementById("coachNotes").value.trim(),
         classLevel:data.profile?.className||""
       }
     });
