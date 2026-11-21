@@ -794,43 +794,140 @@ function coachExplain(){
   out.innerHTML=text;
   panel.hidden=false;
 }
-const COACH_CHAT_PREFIX="schulplaner-coach-chat-v1-";
+const COACH_CHAT_PREFIX="schulplaner-coach-chats-v2-";
+const COACH_CHAT_LEGACY_PREFIX="schulplaner-coach-chat-v1-";
+const COACH_MAX_CHATS=20;
 let coachConversation = [];
+let coachChats = [];
+let activeCoachChatId = "";
 
 function coachChatStorageKey(){
   return currentUser?.id ? COACH_CHAT_PREFIX+currentUser.id : "";
 }
-function coachSaveConversation(){
+function coachCreateChat(){
+  return {id:"chat-"+Date.now()+"-"+Math.random().toString(36).slice(2,8),title:"Neuer Chat",messages:[],updatedAt:new Date().toISOString()};
+}
+function coachSaveChats(){
   const key=coachChatStorageKey();
   if(!key)return;
   try{
-    coachConversation=coachConversation.slice(-16);
-    localStorage.setItem(key,JSON.stringify(coachConversation));
-  }catch(error){console.warn("Lerncoach-Verlauf konnte lokal nicht gespeichert werden:",error);}
+    const active=coachChats.find(chat=>chat.id===activeCoachChatId);
+    if(active)active.messages=coachConversation.slice(-16);
+    coachChats.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+    coachChats=coachChats.slice(0,COACH_MAX_CHATS);
+    if(!coachChats.some(chat=>chat.id===activeCoachChatId)){
+      activeCoachChatId=coachChats[0]?.id||"";
+      coachConversation=coachChats[0]?.messages||[];
+    }
+    localStorage.setItem(key,JSON.stringify({activeChatId:activeCoachChatId,chats:coachChats}));
+    coachRenderChatList();
+  }catch(error){console.warn("Lerncoach-Chats konnten lokal nicht gespeichert werden:",error);}
 }
 function coachLoadConversation(){
   const key=coachChatStorageKey();
   coachConversation=[];
-  if(!key)return;
+  coachChats=[];
+  activeCoachChatId="";
+  if(!key){coachRenderChatList();return;}
   try{
-    const saved=JSON.parse(localStorage.getItem(key)||"[]");
-    if(Array.isArray(saved)){
-      coachConversation=saved.filter(message=>
-        message && (message.role==="user"||message.role==="assistant") &&
-        typeof message.content==="string"
-      ).slice(-16);
+    const saved=JSON.parse(localStorage.getItem(key)||"null");
+    if(saved&&Array.isArray(saved.chats)){
+      coachChats=saved.chats.filter(chat=>chat&&typeof chat.id==="string"&&Array.isArray(chat.messages)).map(chat=>({
+        id:chat.id,
+        title:String(chat.title||"Neuer Chat"),
+        updatedAt:String(chat.updatedAt||new Date().toISOString()),
+        messages:chat.messages.filter(message=>message&&(message.role==="user"||message.role==="assistant")&&typeof message.content==="string").slice(-16)
+      })).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,COACH_MAX_CHATS);
+      activeCoachChatId=coachChats.some(chat=>chat.id===saved.activeChatId)?saved.activeChatId:(coachChats[0]?.id||"");
+    }else{
+      const legacy=JSON.parse(localStorage.getItem(COACH_CHAT_LEGACY_PREFIX+currentUser.id)||"[]");
+      if(Array.isArray(legacy)&&legacy.length){
+        const migrated=coachCreateChat();
+        migrated.messages=legacy.filter(message=>message&&(message.role==="user"||message.role==="assistant")&&typeof message.content==="string").slice(-16);
+        migrated.title=String(migrated.messages.find(message=>message.role==="user")?.content||"Alter Chat").slice(0,48);
+        migrated.updatedAt=new Date().toISOString();
+        coachChats=[migrated];
+        activeCoachChatId=migrated.id;
+        coachSaveChats();
+      }
     }
-  }catch(error){
-    console.warn("Gespeicherter Lerncoach-Verlauf ist nicht lesbar:",error);
-    localStorage.removeItem(key);
-  }
+  }catch(error){console.warn("Gespeicherte Lerncoach-Chats sind nicht lesbar:",error);}
+  const active=coachChats.find(chat=>chat.id===activeCoachChatId);
+  coachConversation=active?active.messages.slice():[];
+  coachRenderConversation();
+  coachRenderChatList();
   const panel=document.getElementById("coachExplanationPanel");
-  if(panel){
-    coachRenderConversation();
-    panel.hidden=coachConversation.length===0;
-  }
+  if(panel)panel.hidden=coachConversation.length===0;
 }
-
+function coachStartNewChat(){
+  if(!currentUser){document.getElementById("coachStatus").textContent="Bitte melde dich an, um Chats zu speichern.";return;}
+  const chat=coachCreateChat();
+  coachChats.unshift(chat);
+  activeCoachChatId=chat.id;
+  coachConversation=[];
+  if(coachChats.length>COACH_MAX_CHATS)coachChats=coachChats.slice(0,COACH_MAX_CHATS);
+  coachRenderConversation();
+  const panel=document.getElementById("coachExplanationPanel");
+  if(panel)panel.hidden=true;
+  document.getElementById("coachQuestionInput").value="";
+  coachSaveChats();
+  document.getElementById("coachStatus").textContent="Neuer Chat gestartet.";
+}
+function coachOpenChat(id){
+  const chat=coachChats.find(item=>item.id===id);
+  if(!chat)return;
+  const current=coachChats.find(item=>item.id===activeCoachChatId);
+  if(current)current.messages=coachConversation.slice(-16);
+  activeCoachChatId=id;
+  coachConversation=chat.messages.slice();
+  coachRenderConversation();
+  const panel=document.getElementById("coachExplanationPanel");
+  if(panel)panel.hidden=coachConversation.length===0;
+  coachRenderChatList();
+  coachSaveChats();
+}
+function coachDeleteChat(id){
+  const chat=coachChats.find(item=>item.id===id);
+  if(!chat||!confirm("Diesen Chat wirklich löschen?"))return;
+  coachChats=coachChats.filter(item=>item.id!==id);
+  if(activeCoachChatId===id){
+    activeCoachChatId=coachChats[0]?.id||"";
+    coachConversation=coachChats[0]?.messages.slice()||[];
+    coachRenderConversation();
+    const panel=document.getElementById("coachExplanationPanel");
+    if(panel)panel.hidden=coachConversation.length===0;
+  }
+  coachSaveChats();
+}
+function coachRenderChatList(){
+  const list=document.getElementById("coachChatList");
+  if(!list)return;
+  list.replaceChildren();
+  if(!coachChats.length){
+    const empty=document.createElement("p");
+    empty.className="muted small-note";
+    empty.textContent="Noch keine gespeicherten Chats. Starte mit „Neuer Chat“ oder stelle deine erste Frage.";
+    list.appendChild(empty);
+    return;
+  }
+  coachChats.forEach((chat,index)=>{
+    const row=document.createElement("div");
+    row.className="coach-chat-row"+(chat.id===activeCoachChatId?" active":"");
+    const open=document.createElement("button");
+    open.type="button";
+    open.className="coach-chat-open";
+    open.textContent=(index+1)+". "+chat.title;
+    open.addEventListener("click",()=>coachOpenChat(chat.id));
+    const del=document.createElement("button");
+    del.type="button";
+    del.className="coach-chat-delete";
+    del.textContent="Löschen";
+    del.setAttribute("aria-label","Chat löschen: "+chat.title);
+    del.addEventListener("click",()=>coachDeleteChat(chat.id));
+    row.append(open,del);
+    list.appendChild(row);
+  });
+}
 function coachRenderConversation(){
   const out=document.getElementById("coachExplanation");
   out.replaceChildren();
@@ -871,7 +968,11 @@ async function coachAskAI(){
     if(result?.error) throw new Error(result.error);
     if(!result?.answer) throw new Error("Der Lerncoach hat keine Antwort erhalten.");
     coachConversation.push({role:"user",content:question},{role:"assistant",content:result.answer});
-    coachSaveConversation();
+    let activeChat=coachChats.find(chat=>chat.id===activeCoachChatId);
+    if(!activeChat){activeChat=coachCreateChat();coachChats.unshift(activeChat);activeCoachChatId=activeChat.id;}
+    if(activeChat.title==="Neuer Chat")activeChat.title=question.slice(0,48)+(question.length>48?"…":"");
+    activeChat.updatedAt=new Date().toISOString();
+    coachSaveChats();
     coachRenderConversation();
     document.getElementById("coachQuestionInput").value="";
     status.textContent="Antwort erhalten – du kannst direkt nachfragen ✓";
@@ -963,6 +1064,7 @@ document.getElementById("coachSaveButton").addEventListener("click",coachSaveNot
 document.getElementById("coachTopic").addEventListener("change",coachLoadNotes);
 document.getElementById("coachExplainButton").addEventListener("click",coachExplain);
 document.getElementById("coachAskButton").addEventListener("click",coachAskAI);
+document.getElementById("coachNewChatButton").addEventListener("click",coachStartNewChat);
 document.getElementById("coachQuestionInput").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();coachAskAI()}});
 document.getElementById("coachStartButton").addEventListener("click",coachStart);
 document.getElementById("coachNextButton").addEventListener("click",coachNext);
