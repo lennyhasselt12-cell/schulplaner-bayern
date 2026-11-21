@@ -788,6 +788,20 @@ function coachExplain(){
   out.innerHTML=text;
   panel.hidden=false;
 }
+let coachConversation = [];
+
+function coachRenderConversation(){
+  const out=document.getElementById("coachExplanation");
+  out.replaceChildren();
+  coachConversation.forEach(message=>{
+    const bubble=document.createElement("div");
+    bubble.className="chat-message "+(message.role==="user"?"user":"bot");
+    bubble.style.whiteSpace="pre-wrap";
+    bubble.textContent=message.content;
+    out.appendChild(bubble);
+  });
+}
+
 async function coachAskAI(){
   const question=document.getElementById("coachQuestionInput").value.trim();
   const panel=document.getElementById("coachExplanationPanel");
@@ -798,32 +812,34 @@ async function coachAskAI(){
   const button=document.getElementById("coachAskButton");
   button.disabled=true;
   button.textContent="Lerncoach denkt nach …";
-  status.textContent="Deine Frage wird sicher an den Lerncoach übermittelt.";
+  status.textContent="Deine Frage wird zusammen mit dem bisherigen Gespräch übermittelt.";
   panel.hidden=false;
-  out.textContent="Einen Moment – ich bereite die Antwort vor …";
   try{
     const mode=document.getElementById("coachMode").value||"standard";
     const {data:result,error}=await supabaseClient.functions.invoke("lerncoach-ai",{
       body:{
         question,
+        history:coachConversation.slice(-16),
         mode,
         topic:document.getElementById("coachTopic").value.trim(),
         notes:mode==="personal"?coachBuildPersonalContext():document.getElementById("coachNotes").value.trim(),
-        classLevel:data.profile?.className||""
+        classLevel:data.profile?.klass||data.profile?.className||""
       }
     });
     if(error) throw error;
     if(result?.error) throw new Error(result.error);
     if(!result?.answer) throw new Error("Der Lerncoach hat keine Antwort erhalten.");
-    out.textContent=result.answer;
-    status.textContent="Antwort vom Lerncoach erhalten ✓";
+    coachConversation.push({role:"user",content:question},{role:"assistant",content:result.answer});
+    coachRenderConversation();
+    document.getElementById("coachQuestionInput").value="";
+    status.textContent="Antwort erhalten – du kannst direkt nachfragen ✓";
   }catch(error){
     console.warn("Lerncoach KI:",error);
     const message=error?.message||"Unbekannter Fehler";
     out.textContent=message.includes("noch nicht eingerichtet")
-      ?"Die sichere KI-Schnittstelle ist vorbereitet. Es fehlt noch die Freigabe und Konfiguration eines passenden KI-Anbieters. Deine vorhandenen Lerncoach-Funktionen funktionieren weiterhin."
+      ?"Die sichere KI-Schnittstelle ist vorbereitet. Es fehlt noch die Freigabe und Konfiguration eines passenden KI-Anbieters. Deine vorhandenen Offline-Lernfunktionen funktionieren weiterhin."
       :"Die KI-Antwort konnte gerade nicht geladen werden. "+message;
-    status.textContent="Die KI-Verbindung ist noch nicht vollständig eingerichtet.";
+    status.textContent="Die KI-Verbindung konnte die Frage gerade nicht beantworten.";
   }finally{
     button.disabled=false;
     button.textContent="Frage an Lerncoach senden";
