@@ -332,3 +332,5 @@ body.light .profile-button { background:var(--surface); color:var(--text); }
 #coachQuestionInput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
 #coachAskButton:disabled{opacity:.65;cursor:wait}
 .coach-answer{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.coach-chat-list{display:grid;gap:8px}.coach-chat-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:7px}.coach-chat-row.active{border-color:var(--accent);background:var(--surface2)}.coach-chat-open{flex:1;text-align:left;border:0;background:transparent;color:var(--text);padding:8px;font-size:12px;font-weight:700;overflow-wrap:anywhere}.coach-chat-delete{border:0;background:transparent;color:#df7c88;font-size:11px;padding:8px}
