@@ -106,13 +106,19 @@ async function initSupabase(){
     const {data:sessionData,error}=await supabaseClient.auth.getSession();
     if(error) throw error;
     currentUser=sessionData.session?.user||null;
+    coachLoadConversation();
     updateAuthUI();
     if(currentUser){try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
     supabaseClient.auth.onAuthStateChange(async(_event,session)=>{
       clearTimeout(cloudSaveTimer);cloudReady=false;
-      currentUser=session?.user||null;updateAuthUI();
+      currentUser=session?.user||null;
+      coachLoadConversation();
+      updateAuthUI();
       if(currentUser){try{await loadCloudData()}catch(e){cloudReady=false;setAuthStatus("Laden fehlgeschlagen: "+e.message)}}
       else {
+        coachConversation=[];
+        const coachPanel=document.getElementById("coachExplanationPanel");
+        if(coachPanel) coachPanel.hidden=true;
         data=emptyData();
         localStorage.setItem(KEY,JSON.stringify(data));
         render();
@@ -788,7 +794,42 @@ function coachExplain(){
   out.innerHTML=text;
   panel.hidden=false;
 }
+const COACH_CHAT_PREFIX="schulplaner-coach-chat-v1-";
 let coachConversation = [];
+
+function coachChatStorageKey(){
+  return currentUser?.id ? COACH_CHAT_PREFIX+currentUser.id : "";
+}
+function coachSaveConversation(){
+  const key=coachChatStorageKey();
+  if(!key)return;
+  try{
+    coachConversation=coachConversation.slice(-16);
+    localStorage.setItem(key,JSON.stringify(coachConversation));
+  }catch(error){console.warn("Lerncoach-Verlauf konnte lokal nicht gespeichert werden:",error);}
+}
+function coachLoadConversation(){
+  const key=coachChatStorageKey();
+  coachConversation=[];
+  if(!key)return;
+  try{
+    const saved=JSON.parse(localStorage.getItem(key)||"[]");
+    if(Array.isArray(saved)){
+      coachConversation=saved.filter(message=>
+        message && (message.role==="user"||message.role==="assistant") &&
+        typeof message.content==="string"
+      ).slice(-16);
+    }
+  }catch(error){
+    console.warn("Gespeicherter Lerncoach-Verlauf ist nicht lesbar:",error);
+    localStorage.removeItem(key);
+  }
+  const panel=document.getElementById("coachExplanationPanel");
+  if(panel){
+    coachRenderConversation();
+    panel.hidden=coachConversation.length===0;
+  }
+}
 
 function coachRenderConversation(){
   const out=document.getElementById("coachExplanation");
@@ -830,6 +871,7 @@ async function coachAskAI(){
     if(result?.error) throw new Error(result.error);
     if(!result?.answer) throw new Error("Der Lerncoach hat keine Antwort erhalten.");
     coachConversation.push({role:"user",content:question},{role:"assistant",content:result.answer});
+    coachSaveConversation();
     coachRenderConversation();
     document.getElementById("coachQuestionInput").value="";
     status.textContent="Antwort erhalten – du kannst direkt nachfragen ✓";
