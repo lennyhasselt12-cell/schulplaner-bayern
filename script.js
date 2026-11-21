@@ -964,7 +964,16 @@ async function coachAskAI(){
         classLevel:data.profile?.klass||data.profile?.className||""
       }
     });
-    if(error) throw error;
+    if(error){
+      let detail=error.message||"Die Anfrage ist fehlgeschlagen.";
+      try{
+        if(error.context instanceof Response){
+          const payload=await error.context.clone().json();
+          if(payload?.error)detail=payload.error;
+        }
+      }catch{}
+      throw new Error(detail);
+    }
     if(result?.error) throw new Error(result.error);
     if(!result?.answer) throw new Error("Der Lerncoach hat keine Antwort erhalten.");
     coachConversation.push({role:"user",content:question},{role:"assistant",content:result.answer});
@@ -981,7 +990,7 @@ async function coachAskAI(){
     const message=error?.message||"Unbekannter Fehler";
     out.textContent=message.includes("noch nicht eingerichtet")
       ?"Die sichere KI-Schnittstelle ist vorbereitet. Es fehlt noch die Freigabe und Konfiguration eines passenden KI-Anbieters. Deine vorhandenen Offline-Lernfunktionen funktionieren weiterhin."
-      :"Die KI-Antwort konnte gerade nicht geladen werden. "+message;
+      :message;
     status.textContent="Die KI-Verbindung konnte die Frage gerade nicht beantworten.";
   }finally{
     button.disabled=false;
