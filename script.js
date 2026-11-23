@@ -327,8 +327,32 @@ document.getElementById("materialForm").addEventListener("submit",e=>{
 document.getElementById("examForm").addEventListener("submit",e=>{
   e.preventDefault();data.exams.push({id:Date.now(),title:val("examTitle"),date:val("examDate"),type:val("examType")});e.target.reset();save();
 });
-document.getElementById("resetButton").onclick=()=>{
-  if(confirm("Wirklich alle lokalen Testdaten auf diesem Gerät löschen?")){localStorage.removeItem(KEY);data=loadData();render();go("dashboard")}
+document.getElementById("resetButton").onclick=async()=>{
+  if(!confirm("Möchtest du wirklich alle Planerdaten zurücksetzen? Dabei werden dein Profil, Stundenplan, Noten, Fächer, Lernmaterialien und Prüfungen aus deinem Online-Konto und von diesem Gerät gelöscht."))return;
+  const resetData=emptyData();
+  if(currentUser && cloudReady){
+    try{
+      const {data:row,error:readError}=await supabaseClient.from("user_settings").select("settings").eq("user_id",currentUser.id).maybeSingle();
+      if(readError)throw readError;
+      const settings={...(row?.settings||{}),app_data:resetData};
+      const {error}=await supabaseClient.from("user_settings").upsert({user_id:currentUser.id,settings,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      if(error)throw error;
+      clearTimeout(cloudSaveTimer);
+      data=resetData;
+      localStorage.setItem(KEY,JSON.stringify(data));
+      localStorage.setItem(ACTIVE_USER_KEY,currentUser.id);
+      render();go("dashboard");
+      setAuthStatus("Dein Planer wurde online zurückgesetzt ✓");
+    }catch(err){
+      console.error(err);
+      alert("Die Planerdaten konnten nicht zurückgesetzt werden: "+(err.message||"Unbekannter Fehler"));
+    }
+  }else{
+    data=resetData;
+    localStorage.setItem(KEY,JSON.stringify(data));
+    render();go("dashboard");
+    setAuthStatus("Der Planer auf diesem Gerät wurde zurückgesetzt.");
+  }
 };
 
 document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>{
