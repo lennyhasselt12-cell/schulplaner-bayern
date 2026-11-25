@@ -537,13 +537,27 @@ function editSubject(id){
   const name=prompt("Fachname:",s.name);if(name===null)return;
   const clean=name.trim();if(!clean)return alert("Der Fachname darf nicht leer sein.");
   const short=prompt("Kürzel:",s.short||clean.slice(0,3).toUpperCase());if(short===null)return;
-  const color=prompt("Farbcode (z. B. #3977b5):",s.color);if(color===null)return;
-  if(!/^#[0-9a-fA-F]{6}$/.test(color.trim()))return alert("Bitte einen gültigen Farbcode wie #3977b5 eingeben.");
-  const old=s.name;s.name=clean;s.short=short.trim()||clean.slice(0,3).toUpperCase();s.color=color.trim();
+  const old=s.name;
+  s.name=clean;
+  s.short=short.trim()||clean.slice(0,3).toUpperCase();
   data.lessons.forEach(l=>{if(l.subject===old)l.subject=clean});
   data.grades.forEach(g=>{if(g.subject===old)g.subject=clean});
   data.materials.forEach(m=>{if(m.subject===old)m.subject=clean});
   save();
+
+  // Beim Bearbeiten denselben visuellen Farbwähler wie beim Anlegen verwenden.
+  const colorInput=document.getElementById("subjectColor");
+  if(!colorInput)return;
+  const createColor=colorInput.value;
+  colorInput.value=/^#[0-9a-fA-F]{6}$/.test(s.color||"")?s.color:createColor;
+  const applyColor=()=>{
+    colorInput.removeEventListener("change",applyColor);
+    s.color=colorInput.value;
+    colorInput.value=createColor;
+    save();
+  };
+  colorInput.addEventListener("change",applyColor);
+  colorInput.click();
 }
 
 function renderPrognosis(){
