@@ -537,29 +537,45 @@ function editSubject(id){
   const name=prompt("Fachname:",s.name);if(name===null)return;
   const clean=name.trim();if(!clean)return alert("Der Fachname darf nicht leer sein.");
   const short=prompt("Kürzel:",s.short||clean.slice(0,3).toUpperCase());if(short===null)return;
+
   const old=s.name;
-  s.name=clean;
-  s.short=short.trim()||clean.slice(0,3).toUpperCase();
-  data.lessons.forEach(l=>{if(l.subject===old)l.subject=clean});
-  data.grades.forEach(g=>{if(g.subject===old)g.subject=clean});
-  data.materials.forEach(m=>{if(m.subject===old)m.subject=clean});
-  save();
-
-  // Beim Bearbeiten denselben visuellen Farbwähler wie beim Anlegen verwenden.
-  const colorInput=document.getElementById("subjectColor");
-  if(!colorInput)return;
-  const createColor=colorInput.value;
-  colorInput.value=/^#[0-9a-fA-F]{6}$/.test(s.color||"")?s.color:createColor;
-  const applyColor=()=>{
-    colorInput.removeEventListener("change",applyColor);
-    s.color=colorInput.value;
-    colorInput.value=createColor;
-    save();
-  };
-  colorInput.addEventListener("change",applyColor);
-  colorInput.click();
+  const nextShort=short.trim()||clean.slice(0,3).toUpperCase();
+  const overlay=document.createElement("div");
+  overlay.className="subject-color-overlay";
+  overlay.style.cssText="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.65)";
+  const panel=document.createElement("div");
+  panel.style.cssText="width:min(100%,340px);padding:22px;border-radius:18px;background:var(--panel,#1e293b);color:var(--text,#fff);box-shadow:0 18px 55px rgba(0,0,0,.35)";
+  const heading=document.createElement("h3");
+  heading.textContent="Farbe für "+clean;
+  heading.style.margin="0 0 16px";
+  const label=document.createElement("label");
+  label.textContent="Farbe auswählen";
+  label.style.cssText="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px";
+  const colorInput=document.createElement("input");
+  colorInput.type="color";
+  colorInput.value=/^#[0-9a-fA-F]{6}$/.test(s.color||"")?s.color:"#3977b5";
+  colorInput.setAttribute("aria-label","Farbe des Fachs");
+  colorInput.style.cssText="width:64px;height:44px;border:0;background:transparent;cursor:pointer";
+  label.appendChild(colorInput);
+  const actions=document.createElement("div");
+  actions.style.cssText="display:flex;justify-content:flex-end;gap:10px";
+  const cancel=document.createElement("button");
+  cancel.type="button";cancel.className="secondary-button";cancel.textContent="Abbrechen";
+  const confirmButton=document.createElement("button");
+  confirmButton.type="button";confirmButton.className="primary-button";confirmButton.textContent="Speichern";
+  actions.append(cancel,confirmButton);
+  panel.append(heading,label,actions);overlay.appendChild(panel);document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  cancel.addEventListener("click",close);
+  overlay.addEventListener("click",event=>{if(event.target===overlay)close()});
+  confirmButton.addEventListener("click",()=>{
+    s.name=clean;s.short=nextShort;s.color=colorInput.value;
+    data.lessons.forEach(l=>{if(l.subject===old)l.subject=clean});
+    data.grades.forEach(g=>{if(g.subject===old)g.subject=clean});
+    data.materials.forEach(m=>{if(m.subject===old)m.subject=clean});
+    close();save();
+  });
 }
-
 function renderPrognosis(){
  const box=document.getElementById("prognosisContent");if(!box)return;
  const p=data.profile||{};
