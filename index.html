@@ -33,7 +33,6 @@
       <header class="topbar">
         <button class="mobile-brand" id="menuToggle">☰ <strong>Schulplaner</strong></button>
         <div class="topbar-spacer"></div>
-        <button class="theme-toggle" id="installAppButton" type="button" style="display:none">↓ App installieren</button>
         <button class="theme-toggle" id="themeToggle" aria-label="Darstellung wechseln">☀️ <span>Hell</span></button>
         <button class="profile-button" id="profileButton"><span class="profile-dot"></span> Profil</button>
       </header>
@@ -168,28 +167,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
   <script>
-    (function () {
-      const installButton = document.getElementById("installAppButton");
-      let deferredPrompt = null;
-      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-      if (isStandalone) return;
-      installButton.style.display = "flex";
-      window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); deferredPrompt = event; });
-      installButton.addEventListener("click", async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const choice = await deferredPrompt.userChoice;
-          deferredPrompt = null;
-          if (choice.outcome === "accepted") installButton.style.display = "none";
-          return;
-        }
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        alert(isIOS
-          ? "So installierst du den Schulplaner auf dem iPhone:\\n\\n1. Öffne diese Seite in Safari.\\n2. Tippe auf „Teilen“.\\n3. Wähle „Zum Home-Bildschirm“.\\n4. Tippe auf „Hinzufügen“."
-          : "Öffne das Browser-Menü (⋮) und wähle „App installieren“ oder „Zum Startbildschirm hinzufügen“. Falls die Option fehlt, lade die Seite neu und prüfe die Internetverbindung.");
-      });
-      window.addEventListener("appinstalled", () => { installButton.style.display = "none"; deferredPrompt = null; });
-    })();
     if ("serviceWorker" in navigator) {
       let refreshing = false;
       navigator.serviceWorker.addEventListener("controllerchange", () => { if (refreshing) return; refreshing = true; window.location.reload(); });
